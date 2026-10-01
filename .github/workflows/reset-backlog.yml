@@ -1,0 +1,22 @@
+name: Reset backlog
+
+on:
+  workflow_dispatch:
+    inputs:
+      konfirmasi:
+        description: 'Ketik HAPUS untuk melanjutkan'
+        type: string
+        required: true
+
+jobs:
+  reset:
+    if: ${{ inputs.konfirmasi == 'HAPUS' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reset
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          chmod +x reset-github.sh
+          ./reset-github.sh
