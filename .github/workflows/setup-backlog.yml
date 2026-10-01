@@ -1,0 +1,26 @@
+name: Setup backlog
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run (tidak mengubah apa pun)"
+        type: boolean
+        default: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Jalankan skrip
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          chmod +x setup-github.sh
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ./setup-github.sh --dry-run
+          else
+            ./setup-github.sh
+          fi
