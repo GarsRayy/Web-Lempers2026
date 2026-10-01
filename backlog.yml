@@ -1,5 +1,5 @@
 # backlog.yml — sumber data tunggal untuk setup-github.sh
-# Sumber: PRD.md & Guide.md (1 Okt 2026). Ubah di sini, lalu jalankan ulang skrip (idempotent).
+# Sumber: PRD.md & Guide.md (1 Okt 2026), diselaraskan dengan SKPL Rev D (pembayaran DOKU). Ubah di sini, lalu jalankan ulang skrip (idempotent).
 #
 # Konvensi:
 #   - Milestone repo = Iterasi XP (I1-I9) + "Fase Berikutnya".
@@ -13,6 +13,14 @@ repo: GarsRayy/Web-Lempers2026
 
 project:
   title: "Lempers 2026 - XP Board"
+
+# Penanggung jawab per role (username GitHub). Kosong = tidak di-assign (label role:xx tetap dipasang).
+# Username harus kolaborator repo (sudah cocok dengan daftar Manage access). Ubah lalu jalankan:  ./setup-github.sh --only assign
+assignees:
+  fe: "7refisa"         # Refi Ikhsanti
+  be: "GarsRayy"        # Garis Rayya Rabbani
+  qa: "keiralakeisha"   # Keira Lakeisha Fachra Fuady
+  pm: "choirunnisasy"   # Choirunnisa Syawaldina
 
 milestones:
   - {id: I1, title: "I1 - Fondasi & Walking Skeleton", due: "2026-10-04", desc: "28 Sep-4 Okt. Situs ter-deploy otomatis, spike editor RTE, ERD final, pertanyaan terbuka blocker diputuskan."}
@@ -131,7 +139,7 @@ entries:
     prio: M
     title: "Skema database dari ERD + migrasi + RLS + seed"
     ref: "SKPL D1-D4"
-    notes: "Memerlukan ERD final (DOC-01). Tambahan di luar SKPL: slot_foto, log_aktivitas, laporan (lihat OQ-01, OQ-05)."
+    notes: "Memerlukan ERD final (DOC-01). Tambahan di luar SKPL: slot_foto, log_aktivitas, laporan, serta data pembayaran DOKU dan log webhook (lihat OQ-01, OQ-05, OQ-11). Skema pesanan mengikuti SKPL Rev D (tanpa bukti_bayar manual)."
     ac:
       - "Migrasi bisa dijalankan ulang dari nol"
       - "RLS aktif pada tabel sensitif"
@@ -168,10 +176,25 @@ entries:
     prio: M
     title: "Spike provider email invoice (kuota, deliverability)"
     ref: "SKPL-F-09"
+    notes: "Invoice dikirim otomatis dari handler webhook DOKU (US-21)."
     ac:
       - "Email uji sampai ke Gmail dan email kampus (bukan spam)"
       - "Kuota gratis mencukupi perkiraan volume pesanan"
     slices: [{t: Full, m: I5, p: 2, g: M5, r: be}]
+
+  - id: SP-04
+    kind: spike
+    epic: 0-fondasi
+    prio: M
+    title: "Spike integrasi DOKU di sandbox (checkout, webhook, signature, idempotensi)"
+    ref: "SKPL-F-08, SKPL-F-09"
+    notes: "Memitigasi risiko integrasi payment gateway (SKPL Rev D) sebelum US-20/US-21 dibangun. Memakai akun DOKU Sandbox untuk simulasi pembayaran; akun produksi dibahas di OQ-12. Poin usulan, kalibrasi ulang di planning."
+    ac:
+      - "Sesi checkout berhasil dibuat dari server dan pemesan diarahkan ke halaman DOKU sandbox"
+      - "Webhook uji diterima di URL preview Vercel dan tanda tangannya (signature) tervalidasi"
+      - "Notifikasi ganda tidak menghasilkan efek ganda (idempoten)"
+      - "Kesimpulan tertulis maksimal 1 halaman: alur, metode bayar yang diaktifkan, keterbatasan"
+    slices: [{t: Full, m: I3, p: 2, g: M5, r: be}]
 
   # ===================== EPIC A - AKUN & RBAC =====================
   - id: US-01
@@ -347,7 +370,7 @@ entries:
     ref: "SKPL-NF-05"
     story: "Sebagai Sistem, saya ingin mengompres semua gambar unggahan, agar kuota storage hemat dan halaman cepat."
     ac:
-      - "Semua unggahan (artikel, profil, produk, bukti bayar) maksimal 500 KB"
+      - "Semua unggahan gambar (artikel, profil, produk) maksimal 500 KB"
       - "Hanya format gambar yang diizinkan"
       - "File tidak valid atau terlalu besar ditolak dengan pesan jelas"
     slices: [{t: Full, m: I4, p: 3, g: M6, r: be}]
@@ -416,7 +439,7 @@ entries:
     notes: "Field jumlah/total/kode pesanan belum ada di SKPL (OQ-05)."
     ac:
       - "Form (nama, alamat, no. telp, email, jumlah) tervalidasi"
-      - "Pesanan tercatat berstatus Menunggu Verifikasi"
+      - "Pesanan tercatat berstatus Menunggu Pembayaran (usulan; SKPL Rev D masih menulis 'Menunggu Verifikasi', diselaraskan di DOC-03)"
       - "Kode pesanan unik dibuat"
     slices: [{t: UI, m: I3, p: 1.2, g: M3}, {t: Live, m: I5, p: 1.8, g: M5}]
 
@@ -427,41 +450,46 @@ entries:
     title: "Reservasi foto studio tanpa double booking"
     ref: "SKPL-F-07"
     story: "Sebagai Pengunjung, saya ingin mereservasi paket foto studio dengan slot tersedia, agar jadwal saya terjamin."
-    notes: "Kerjakan dengan TDD, termasuk uji konkurensi."
+    notes: "Kerjakan dengan TDD, termasuk uji konkurensi. Karena pembayaran DOKU asinkron, slot ditahan sementara selama pembayaran (usulan; lihat OQ-11)."
     ac:
       - "Pilih paket lalu pilih slot dari yang tersedia"
       - "Pengecekan ulang saat kirim: tidak terjadi double booking (diuji dengan dua permintaan bersamaan)"
       - "Bentrok ditangani dengan pesan jelas"
+      - "Slot ditahan sementara selama pembayaran dan dilepas bila pembayaran gagal atau kedaluwarsa (usulan, lihat OQ-11)"
     slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I6, p: 3, g: M5}]
 
   - id: US-20
     kind: story
     epic: D-produk
     prio: M
-    title: "Pembayaran QRIS statis & unggah bukti"
+    title: "Pembayaran digital via DOKU (checkout: QRIS dinamis, VA, e-wallet)"
     ref: "SKPL-F-08"
-    story: "Sebagai Pengunjung, saya ingin membayar lewat QRIS dan mengunggah bukti, agar pesanan saya dapat diverifikasi."
-    notes: "Alur pembayaran semi-manual, bukan payment gateway (OQ-02)."
+    story: "Sebagai Pengunjung, saya ingin membayar pesanan lewat halaman pembayaran DOKU, agar pembayaran terverifikasi otomatis tanpa mengunggah bukti."
+    notes: "Mengikuti SKPL Rev D (payment gateway DOKU). Bergantung pada OQ-12 (akun merchant) dan SP-04 (spike sandbox). Poin dinaikkan dari 3 ke 5 (usulan) karena integrasi gateway; kalibrasi ulang di planning."
     ac:
-      - "Setelah mengisi form tampil citra QRIS statis + nominal"
-      - "Pengunjung mengunggah bukti (otomatis dikompres)"
-      - "Bukti tersimpan dan tertaut ke pesanan"
-    slices: [{t: UI, m: I3, p: 1.2, g: M3}, {t: Live, m: I6, p: 1.8, g: M5}]
+      - "Setelah form pesanan valid, sistem membuat sesi checkout DOKU dan mengarahkan pemesan ke halaman pembayaran"
+      - "Pemesan dapat memilih metode yang diaktifkan di DOKU (QRIS dinamis, virtual account, e-wallet)"
+      - "Tidak ada unggah bukti pembayaran"
+      - "Setelah bayar, pemesan kembali ke halaman status pesanan; status akhir hanya berubah lewat webhook, bukan lewat redirect"
+      - "Seluruh alur teruji di sandbox DOKU (sukses, gagal, kedaluwarsa)"
+    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I6, p: 3, g: M5}]
 
   - id: US-21
     kind: story
     epic: D-produk
     prio: M
-    title: "Verifikasi bukti bayar & invoice email otomatis"
+    title: "Verifikasi pembayaran otomatis (webhook DOKU) & invoice email otomatis"
     ref: "SKPL-F-09"
-    story: "Sebagai Admin Produk, saya ingin memverifikasi bukti lalu mengonfirmasi/menolak pesanan, agar pemesan menerima invoice otomatis."
-    notes: "Format invoice perlu dikonfirmasi (OQ-06). Bergantung pada hasil SP-03."
+    story: "Sebagai Sistem, saya ingin menerima notifikasi pembayaran dari DOKU lalu memperbarui status pesanan dan mengirim invoice, agar pemesan menerima invoice otomatis dan Admin Produk cukup memantau serta mengonfirmasi jadwal foto."
+    notes: "Mengikuti SKPL Rev D. Format invoice perlu dikonfirmasi (OQ-06). Bergantung pada SP-03 (email) dan SP-04 (webhook). Daftar status di bawah adalah usulan sampai SKPL direvisi: Menunggu Pembayaran, Dibayar, Kedaluwarsa, Gagal; konfirmasi jadwal foto oleh Admin Produk (OQ-11)."
     ac:
-      - "Admin Produk melihat antrean pesanan + bukti"
-      - "Konfirmasi mengubah status ke Dikonfirmasi dan mengirim invoice otomatis (kode, item, harga, slot bila ada)"
-      - "Tolak mengubah status ke Ditolak"
-      - "verified_by dan verified_at tercatat"
-      - "Data pesanan lain tidak bisa diubah (append-only, hanya status)"
+      - "Endpoint webhook memvalidasi tanda tangan (signature) DOKU; permintaan tidak valid ditolak dan tidak mengubah data"
+      - "Notifikasi sukses mengubah status pesanan menjadi Dibayar dan mengirim invoice ke email pemesan (kode, item, harga, slot bila ada)"
+      - "Notifikasi ganda atau berulang tidak mengirim invoice dua kali (idempoten)"
+      - "Pembayaran gagal atau kedaluwarsa tercatat dan slot foto dilepas"
+      - "Admin Produk melihat daftar pesanan beserta status pembayaran dan status pengiriman invoice"
+      - "Admin Produk dapat mengonfirmasi atau menolak request jadwal foto"
+      - "Data pesanan lain tidak bisa diubah (append-only, hanya status); setiap notifikasi webhook tersimpan sebagai log"
     slices: [{t: UI, m: I3, p: 3.2, g: M3}, {t: Live, m: I6, p: 4.8, g: M5}]
 
   - id: US-22
@@ -565,7 +593,7 @@ entries:
     title: "Dokumentasi handover (upload, approve, akses Vercel)"
     ref: "Charter M9"
     story: "Sebagai PIC pasca-rilis, saya ingin dokumentasi handover, agar saya bisa mengoperasikan sistem tanpa bantuan developer."
-    notes: "Draf bertahap sejak I4; finalisasi di I9. Tambahan usulan: akses Supabase, ganti QRIS, reset akun, pemulihan proyek ter-pause."
+    notes: "Draf bertahap sejak I4; finalisasi di I9. Tambahan usulan: akses Supabase, kelola kredensial DOKU, reset akun, pemulihan proyek ter-pause."
     ac:
       - "Panduan upload artikel, approve, akses Vercel"
       - "Dicoba oleh orang di luar tim sampai berhasil"
@@ -602,14 +630,17 @@ entries:
 
   - id: OQ-02
     kind: decision
-    title: "Pembayaran: QRIS statis manual atau payment gateway?"
+    title: "Konfirmasi pembayaran: payment gateway DOKU (SKPL Rev D) menggantikan QRIS statis"
     labels: ["needs-decision"]
     notes: |
-      **Masalah:** Charter menyebut payment gateway terintegrasi; SKPL (Batasan Perancangan) menyebut QRIS statis + verifikasi manual. SKPL 2.3 juga bertentangan dengan 3.5.
+      **Masalah:** PRD dan Guide versi 1 Okt masih menulis QRIS statis + verifikasi manual (bersumber dari SKPL Rev C), sedangkan SKPL Rev D dan Charter memakai payment gateway DOKU dengan verifikasi webhook otomatis.
 
-      **Asumsi kerja:** QRIS statis + verifikasi manual; revisi kalimat di SKPL 2.3.
+      **Asumsi kerja:** DOKU, mengikuti SKPL Rev D. Backlog ini sudah disesuaikan.
 
-      **Putuskan sebelum:** 5 Okt. **Dampak:** US-20, US-21.
+      **Putuskan sebelum:** 5 Okt. **Dampak:** US-20, US-21, TS-04, DOC-03, OQ-12.
+    ac:
+      - "PIC mitra dan dosen mengonfirmasi DOKU sebagai metode pembayaran"
+      - "Keputusan dicatat di log keputusan (Guide 13)"
     slices: [{t: Full, m: I1, r: pm}]
 
   - id: OQ-03
@@ -706,6 +737,30 @@ entries:
       **Putuskan sebelum:** 8 Nov. **Dampak:** US-30, US-29.
     slices: [{t: Full, m: I6, r: pm}]
 
+  - id: OQ-11
+    kind: decision
+    title: "Urutan reservasi foto studio: bayar dulu atau konfirmasi jadwal dulu? Berapa lama slot ditahan?"
+    labels: ["needs-decision"]
+    notes: |
+      **Masalah:** SKPL Rev D menyebut Admin Produk mengonfirmasi request jadwal foto, sedangkan pembayaran kini otomatis lewat DOKU. Belum jelas apakah pemesan membayar sebelum atau sesudah jadwal dikonfirmasi, dan apa yang terjadi pada slot selama pembayaran berlangsung.
+
+      **Asumsi kerja:** pemesan memilih slot, slot ditahan sementara, pemesan membayar, lalu Admin Produk mengonfirmasi jadwal; slot dilepas bila pembayaran gagal atau kedaluwarsa. Lama penahanan ditetapkan tim bersama mitra.
+
+      **Putuskan sebelum:** 12 Okt. **Dampak:** US-17, US-19, US-21.
+    slices: [{t: Full, m: I2, r: pm}]
+
+  - id: OQ-12
+    kind: decision
+    title: "Akun merchant DOKU produksi: pemilik, dokumen, biaya transaksi, dan anggaran"
+    labels: ["needs-decision"]
+    notes: |
+      **Masalah:** akun DOKU Sandbox cukup untuk uji, tetapi transaksi nyata memakai akun DOKU Business yang umumnya melalui proses verifikasi dan dokumen bisnis (periksa syarat terbaru langsung ke DOKU). Belum jelas atas nama siapa akun dibuat (UKM, ITERA, atau perorangan), dokumen apa yang tersedia, siapa menanggung biaya transaksi, dan berapa lama persetujuannya. Anggaran Charter hanya Rp 1.000.000.
+
+      **Asumsi kerja:** kembangkan dan UAT memakai sandbox; ajukan akun produksi sedini mungkin karena waktu persetujuan di luar kendali tim.
+
+      **Putuskan sebelum:** 12 Okt. **Dampak:** US-20, US-21, REL-01, OQ-10.
+    slices: [{t: Full, m: I2, r: pm}]
+
   # ===================== DOKUMEN, QA, UAT, RELEASE =====================
   - id: DOC-01
     kind: doc
@@ -727,6 +782,21 @@ entries:
       - "Activity, Sequence, Class Diagram terisi"
     slices: [{t: Full, m: I7, g: M7, r: qa}]
 
+  - id: DOC-03
+    kind: doc
+    title: "Selaraskan SKPL, PRD, dan Guide dengan keputusan pembayaran DOKU"
+    ref: "SKPL Rev D"
+    notes: "SKPL Rev D mengubah pembayaran ke DOKU tetapi sebagian diagram dan data store masih memakai QRIS/bukti bayar. Keira memimpin perbaikan SKPL; PM memperbarui PRD dan Guide."
+    ac:
+      - "SKPL: Diagram Konteks, DFD Level 0/1 (4.0, 4.3, 4.4), dan Use Case tidak lagi memuat QRIS atau bukti pembayaran; judul gambar sesuai isinya"
+      - "SKPL: D4 dan ERD memuat data pembayaran DOKU (id transaksi, status bayar, metode, waktu bayar, log webhook) dan tidak lagi memuat bukti_bayar/verified_by"
+      - "SKPL: SKPL-F-09 dan 3.1.3 konsisten (invoice otomatis setelah webhook, bukan setelah verifikasi Admin Produk)"
+      - "SKPL: 2.1 dan tabel Karakteristik Pengguna tidak lagi menyebut verifikasi bukti atau QRIS"
+      - "SKPL: penomoran proses Dashboard seragam (5.0 atau 6.0), proses Layanan Aduan ada atau SKPL-F-10 dipetakan dengan benar, kerunutan F-07/F-10/F-12 diperbaiki"
+      - "SKPL: pernyataan media di 3.3 tidak lagi bertentangan soal bukti bayar"
+      - "PRD: tujuan, scope, alur pemesanan 6.2, US-20/21/22, risiko, dan OQ-02 diperbarui; Guide: nilai Simplicity dan rencana I3-I6 diperbarui"
+    slices: [{t: Full, m: I2, r: qa}]
+
   - id: QA-01
     kind: qa
     title: "Regresi penuh E2E (5 alur kritis)"
@@ -735,7 +805,7 @@ entries:
       - "Login per peran"
       - "Tulis, ajukan, approve, tampil di publik"
       - "Cari dan filter berita"
-      - "Pesan, unggah bukti, verifikasi, invoice"
+      - "Pesan, bayar di sandbox DOKU, webhook, invoice"
       - "Reservasi slot"
     slices: [{t: Full, m: I7, g: M7, r: qa}]
 
@@ -747,7 +817,20 @@ entries:
       - "Tidak ada bypass RBAC di level API"
       - "Validasi tipe/ukuran unggahan dan sanitasi HTML rich text"
       - "Rate limit/honeypot aktif di form publik"
+      - "Webhook DOKU: tanda tangan palsu ditolak dan notifikasi ganda tidak berefek ganda"
     slices: [{t: Full, m: I7, g: M7, r: qa}]
+
+  - id: QA-06
+    kind: qa
+    title: "Acceptance test pembayaran DOKU (sandbox): sukses, gagal, kedaluwarsa, webhook ganda/palsu"
+    ref: "SKPL-F-08, SKPL-F-09"
+    notes: "Ditulis sebelum US-20/US-21 Live dikerjakan (XP: test lebih dulu)."
+    ac:
+      - "Skenario bayar sukses: status berubah ke Dibayar dan invoice terkirim satu kali"
+      - "Skenario gagal dan kedaluwarsa: status tercatat dan slot dilepas"
+      - "Webhook dengan tanda tangan salah ditolak"
+      - "Webhook yang sama dikirim dua kali tidak mengirim invoice ganda"
+    slices: [{t: Full, m: I5, g: M5, r: qa}]
 
   - id: QA-03
     kind: qa
@@ -813,12 +896,13 @@ entries:
 
   - id: REL-01
     kind: release
-    title: "Konten awal, 6 akun, dan QRIS di produksi"
+    title: "Konten awal, 6 akun, dan kredensial DOKU produksi"
     ref: "Charter M9"
     ac:
       - "Profil, kategori, dan produk contoh terisi"
       - "6 akun dibuat; kata sandi awal diserahkan aman dan wajib diganti"
-      - "Citra QRIS terpasang"
+      - "Kredensial DOKU produksi terpasang di variabel lingkungan Vercel dan URL webhook produksi terdaftar"
+      - "Transaksi uji bernilai kecil berhasil sampai invoice terkirim"
     slices: [{t: Full, m: I9, g: M9, r: pm}]
 
   - id: REL-02
@@ -826,7 +910,7 @@ entries:
     title: "Sesi serah terima ke pengurus + retrospektif proyek"
     ref: "Charter M9"
     ac:
-      - "Pengurus menjalankan satu siklus artikel dan satu verifikasi pesanan tanpa bantuan"
+      - "Pengurus menjalankan satu siklus artikel dan satu pesanan (bayar, invoice, konfirmasi jadwal) tanpa bantuan"
       - "Akses Vercel (dan Supabase) dialihkan/dibagikan sesuai kesepakatan"
       - "Retrospektif proyek dilakukan"
     slices: [{t: Full, m: I9, g: M9, r: pm}]
