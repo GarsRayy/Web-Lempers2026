@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# setup-github.sh — membuat label, milestone, issue, dan GitHub Project dari backlog.yml
+# setup-github.sh — membuat label, milestone, issue (+ assignee per role), dan GitHub Project dari backlog.yml
 #
 # Idempotent: aman dijalankan ulang. Yang sudah ada dilewati; yang baru ditambahkan.
 # Tidak pernah menghapus atau mengubah isi issue yang sudah ada.
+# Assignee: diambil dari bagian 'assignees' di backlog.yml (role -> username GitHub); kosong = dilewati.
 #
 # Pemakaian:  ./setup-github.sh --dry-run     (lihat dulu, tidak mengubah apa pun)
 #             ./setup-github.sh               (jalankan sungguhan)
+#             ./setup-github.sh --only assign (isi assignee issue yang sudah ada & belum punya assignee)
 #
 # Prasyarat: bash 3.2+, gh (GitHub CLI), jq, yq v4 (mikefarah). Lihat SETUP.md.
 
@@ -25,8 +27,8 @@ Pemakaian: ./setup-github.sh [opsi]
   --dry-run           tampilkan rencana tanpa mengubah apa pun
   --repo OWNER/REPO   timpa repo yang tertulis di backlog.yml
   --backlog FILE      file sumber (default: backlog.yml di folder skrip)
-  --only LANGKAH      daftar dipisah koma: labels,milestones,issues,project
-                      (default: semuanya, berurutan)
+  --only LANGKAH      daftar dipisah koma: labels,milestones,issues,project,assign
+                      (default: labels,milestones,issues,project; 'assign' hanya bila diminta)
   -h, --help          bantuan ini
 
 Variabel lingkungan: SLEEP=detik jeda antar issue (default 1).
@@ -89,12 +91,16 @@ read -r -d '' JQ_FLATTEN <<'JQ' || true
 def prio_name: {"M":"Must","S":"Should","C":"Could"};
 def bullets: map("- [ ] " + .) | join("\n");
 (.milestones | map({(.id): .title}) | add) as $mt
+| (.assignees // {}) as $asg
 | [ .entries[] as $e
     | $e.slices[] as $s
+    | (if $s.t == "UI" then "fe" elif $s.t == "Live" then "be" else ($s.r // "") end) as $role
     | (if $s.t == "Full" then "[\($e.id)]" else "[\($e.id)][\($s.t)]" end) as $prefix
     | ($e.slices | length) as $n
     | {
         title: "\($prefix) \($e.title)",
+        role: $role,
+        assignee: (($asg[$role] // "") | tostring),
         milestone: ($mt[$s.m] // error("milestone '\($s.m)' (di \($e.id)) tidak ada di bagian milestones")),
         points: ($s.p // null),
         prio: (if $e.prio then prio_name[$e.prio] else null end),
@@ -135,11 +141,36 @@ DUP="$(jq -r '[group_by(.title)[] | select(length > 1) | .[0].title] | join("; "
 info "Rencana untuk $REPO$( [ "$DRY" = 1 ] && printf '  (DRY-RUN)' )"
 log "  Label     : $(jq '.labels | length' <<<"$DATA")"
 log "  Milestone : $(jq '.milestones | length' <<<"$DATA")"
-log "  Issue     : $(jq 'length' <<<"$ISSUES")   (poin total: $(jq '[.[].points // 0] | add' <<<"$ISSUES"))"
+log "  Issue     : $(jq 'length' <<<"$ISSUES")   (poin total: $(jq '([.[].points // 0] | add * 10 | round) / 10' <<<"$ISSUES"))"
 log "  Project   : $(jq -r '.project.title' <<<"$DATA")  (owner: $OWNER)"
 log ""
 log "  Beban per milestone (issue | poin):"
-jq -r 'group_by(.milestone)[] | "    \(.[0].milestone): \(length) issue | \([.[].points // 0] | add) poin"' <<<"$ISSUES"
+jq -r 'group_by(.milestone)[] | "    \(.[0].milestone): \(length) issue | \(([.[].points // 0] | add * 10 | round) / 10) poin"' <<<"$ISSUES"
+
+log ""
+log "  Beban per role (issue | poin | assignee):"
+jq -r 'group_by(.role)[] | "    \(if .[0].role == "" then "-" else .[0].role end): \(length) issue | \(([.[].points // 0] | add * 10 | round) / 10) poin | \(if .[0].assignee == "" then "(belum diisi)" else .[0].assignee end)"' <<<"$ISSUES"
+
+# ---------- util assignee ----------
+ASSIGNABLE=""; ASSIGNABLE_LOADED=0; WARNED=""
+load_assignable() {
+  if [ "$ASSIGNABLE_LOADED" = 1 ]; then return 0; fi
+  ASSIGNABLE_LOADED=1
+  if [ "$AUTH" = 1 ]; then
+    ASSIGNABLE="$(gh api "repos/$REPO/assignees?per_page=100" --paginate --jq '.[].login' </dev/null 2>/dev/null || true)"
+  fi
+}
+can_assign() {
+  local u="$1"
+  load_assignable
+  if [ "$AUTH" = 0 ]; then return 0; fi
+  if grep -Fixq -- "$u" <<<"$ASSIGNABLE"; then return 0; fi
+  if ! grep -Fxq -- "$u" <<<"$WARNED"; then
+    WARNED="$WARNED"$'\n'"$u"
+    warn "'$u' belum menjadi kolaborator repo $REPO (atau tidak bisa di-assign): issue untuk role ini dibuat tanpa assignee."
+  fi
+  return 1
+}
 
 # ---------- langkah 1: label ----------
 step_labels() {
@@ -182,7 +213,8 @@ step_milestones() {
 # ---------- langkah 3: issue ----------
 step_issues() {
   info "Issue"
-  local existing_json='[]' i title ms labels body created=0 skipped=0
+  local existing_json='[]' i title ms labels body assignee shown created=0 skipped=0
+  local -a args
   if [ "$AUTH" = 1 ]; then
     existing_json="$(gh issue list --repo "$REPO" --state all --limit 1000 --json title </dev/null)"
   fi
@@ -196,13 +228,39 @@ step_issues() {
     ms="$(jq -r '.milestone' <<<"$i")"
     labels="$(jq -r '.labels | join(",")' <<<"$i")"
     body="$(jq -r '.body' <<<"$i")"
-    act "issue: $title  [$ms | $labels]" \
-      gh issue create --repo "$REPO" --title "$title" --body "$body" --label "$labels" --milestone "$ms"
+    assignee="$(jq -r '.assignee' <<<"$i")"
+    args=(--repo "$REPO" --title "$title" --body "$body" --label "$labels" --milestone "$ms")
+    shown=""
+    if [ -n "$assignee" ] && can_assign "$assignee"; then
+      args+=(--assignee "$assignee"); shown=" -> @$assignee"
+    fi
+    act "issue: $title  [$ms | $labels]$shown" gh issue create "${args[@]}"
     created=$((created + 1))
     if [ "$DRY" = 0 ]; then sleep "$SLEEP"; fi
   done 3< <(jq -c '.[]' <<<"$ISSUES")
   log ""
   log "  Issue baru: $created · dilewati (sudah ada): $skipped"
+}
+
+# ---------- langkah 3b: assignee untuk issue yang sudah ada ----------
+step_assign() {
+  info "Assignee"
+  if [ "$AUTH" = 0 ]; then warn "Belum login ke gh: langkah assign dilewati."; return 0; fi
+  local existing i title user num n=0
+  existing="$(gh issue list --repo "$REPO" --state all --limit 1000 --json number,title,assignees </dev/null)"
+  while IFS= read -r i <&3; do
+    title="$(jq -r '.title' <<<"$i")"
+    user="$(jq -r '.assignee' <<<"$i")"
+    if [ -z "$user" ]; then continue; fi
+    num="$(jq -r --arg t "$title" '[.[] | select(.title == $t)][0] | if . == null then empty elif (.assignees | length) > 0 then empty else .number end' <<<"$existing")"
+    if [ -z "$num" ]; then continue; fi
+    if can_assign "$user"; then
+      act "assign #$num -> @$user  ($title)" gh issue edit "$num" --repo "$REPO" --add-assignee "$user"
+      n=$((n + 1))
+    fi
+  done 3< <(jq -c '.[]' <<<"$ISSUES")
+  log ""
+  log "  Issue di-assign: $n (hanya yang belum punya assignee)"
 }
 
 # ---------- langkah 4: GitHub Project (v2) ----------
@@ -218,37 +276,41 @@ step_project() {
     return 0
   fi
 
-  local num pid fields issues_json i title url item points prio gate
-  num="$(gh project list --owner "$OWNER" --limit 100 --format json </dev/null \
-        | jq -r --arg t "$ptitle" '[.projects[] | select(.title == $t)][0].number // empty')"
+  local num pid fields issues_json i title url item points prio gate plist me POWNER="$OWNER"
+  if me="$(gh api user --jq .login </dev/null 2>/dev/null)" && [ "$me" = "$OWNER" ]; then POWNER="@me"; fi
+  if ! plist="$(gh project list --owner "$POWNER" --limit 100 --format json </dev/null 2>&1)"; then
+    die "Gagal mengakses GitHub Project milik '$OWNER': $plist
+       Pastikan token adalah PAT classic dengan scope 'project' (bukan fine-grained, bukan GITHUB_TOKEN bawaan Actions)."
+  fi
+  num="$(jq -r --arg t "$ptitle" '[.projects[] | select(.title == $t)][0].number // empty' <<<"$plist")"
   if [ -z "$num" ]; then
-    num="$(gh project create --owner "$OWNER" --title "$ptitle" --format json </dev/null | jq -r '.number')"
+    num="$(gh project create --owner "$POWNER" --title "$ptitle" --format json </dev/null | jq -r '.number')"
     log "  + project #$num: $ptitle"
   else
     log "  = project #$num sudah ada: $ptitle"
   fi
-  pid="$(gh project view "$num" --owner "$OWNER" --format json </dev/null | jq -r '.id')"
-  gh project link "$num" --owner "$OWNER" --repo "$REPO" </dev/null >/dev/null 2>&1 \
+  pid="$(gh project view "$num" --owner "$POWNER" --format json </dev/null | jq -r '.id')"
+  gh project link "$num" --owner "$POWNER" --repo "$REPO" </dev/null >/dev/null 2>&1 \
     || warn "Tidak bisa menautkan project ke repo (mungkin sudah tertaut / versi gh lama). Lanjut."
 
-  fields="$(gh project field-list "$num" --owner "$OWNER" --limit 50 --format json </dev/null)"
+  fields="$(gh project field-list "$num" --owner "$POWNER" --limit 50 --format json </dev/null)"
   has_field() { jq -e --arg n "$1" 'any(.fields[]; .name == $n)' <<<"$fields" >/dev/null; }
 
   if ! has_field "Poin"; then
-    gh project field-create "$num" --owner "$OWNER" --name "Poin" --data-type NUMBER </dev/null >/dev/null
+    gh project field-create "$num" --owner "$POWNER" --name "Poin" --data-type NUMBER </dev/null >/dev/null
     log "  + field: Poin"
   fi
   if ! has_field "Prioritas"; then
-    gh project field-create "$num" --owner "$OWNER" --name "Prioritas" --data-type SINGLE_SELECT \
+    gh project field-create "$num" --owner "$POWNER" --name "Prioritas" --data-type SINGLE_SELECT \
       --single-select-options "Must,Should,Could" </dev/null >/dev/null
     log "  + field: Prioritas"
   fi
   if ! has_field "Gerbang Charter"; then
-    gh project field-create "$num" --owner "$OWNER" --name "Gerbang Charter" --data-type SINGLE_SELECT \
+    gh project field-create "$num" --owner "$POWNER" --name "Gerbang Charter" --data-type SINGLE_SELECT \
       --single-select-options "M3,M4,M5,M6,M7,M8,M9" </dev/null >/dev/null
     log "  + field: Gerbang Charter"
   fi
-  fields="$(gh project field-list "$num" --owner "$OWNER" --limit 50 --format json </dev/null)"
+  fields="$(gh project field-list "$num" --owner "$POWNER" --limit 50 --format json </dev/null)"
   fid() { jq -r --arg n "$1" '.fields[] | select(.name == $n) | .id' <<<"$fields"; }
   oid() { jq -r --arg n "$1" --arg o "$2" '.fields[] | select(.name == $n) | .options[] | select(.name == $o) | .id' <<<"$fields"; }
   local f_poin f_prio f_gate
@@ -260,7 +322,7 @@ step_project() {
     title="$(jq -r '.title' <<<"$i")"
     url="$(jq -r --arg t "$title" '[.[] | select(.title == $t)][0].url // empty' <<<"$issues_json")"
     if [ -z "$url" ]; then warn "Issue tidak ditemukan di repo, dilewati: $title"; continue; fi
-    item="$(gh project item-add "$num" --owner "$OWNER" --url "$url" --format json </dev/null | jq -r '.id')"
+    item="$(gh project item-add "$num" --owner "$POWNER" --url "$url" --format json </dev/null | jq -r '.id')"
     points="$(jq -r '.points // empty' <<<"$i")"
     prio="$(jq -r '.prio // empty' <<<"$i")"
     gate="$(jq -r '.gate // empty' <<<"$i")"
@@ -286,11 +348,12 @@ step_project() {
 if want labels;     then step_labels;     fi
 if want milestones; then step_milestones; fi
 if want issues;     then step_issues;     fi
+if want assign;     then step_assign;     fi
 if want project;    then step_project;    fi
 
 info "Selesai$( [ "$DRY" = 1 ] && printf ' (DRY-RUN: tidak ada yang diubah)' )"
 if [ "$DRY" = 1 ]; then
   log "  Jika rencana sudah sesuai, jalankan tanpa --dry-run."
 else
-  log "  Langkah manual: buat tampilan (view) di Project. Lihat SETUP.md bagian 'Tampilan Project'."
+  log "  Langkah manual: buat tampilan (Board/Table/Roadmap) di GitHub Project; belum bisa dibuat lewat gh."
 fi
