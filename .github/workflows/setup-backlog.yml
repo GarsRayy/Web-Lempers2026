@@ -7,6 +7,10 @@ on:
         description: "Dry-run (tidak mengubah apa pun)"
         type: boolean
         default: true
+      only:
+        description: "Opsional: labels,milestones,issues,project,assign (kosong = semua kecuali assign)"
+        type: string
+        default: ""
 
 jobs:
   setup:
@@ -14,13 +18,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Jalankan skrip
+      - name: Cek token
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+          gh api user --jq '"Login sebagai: " + .login'
+          gh auth status || true
+
+      - name: Jalankan skrip
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          INPUT_DRY: ${{ inputs.dry_run }}
+          INPUT_ONLY: ${{ inputs.only }}
+        run: |
           chmod +x setup-github.sh
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            ./setup-github.sh --dry-run
-          else
-            ./setup-github.sh
-          fi
+          args=()
+          if [ "$INPUT_DRY" = "true" ]; then args+=(--dry-run); fi
+          if [ -n "$INPUT_ONLY" ]; then args+=(--only "$INPUT_ONLY"); fi
+          ./setup-github.sh "${args[@]}"
