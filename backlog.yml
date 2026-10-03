@@ -13,10 +13,10 @@ project:
 # Penanggung jawab per role (username GitHub). Kosong = tidak di-assign (label role:xx tetap dipasang).
 # Username harus kolaborator repo (sudah cocok dengan daftar Manage access). Ubah lalu jalankan:  ./setup-github.sh --only assign
 assignees:
-  fe: "7refisa"         # Refi Ikhsanti
-  be: "GarsRayy"        # Garis Rayya Rabbani
-  qa: "keiralakeisha"   # Keira Lakeisha Fachra Fuady
-  pm: "choirunnisasy"   # Choirunnisa Syawaldina
+  fe: "7refisa"
+  be: "GarsRayy"
+  qa: "keiralakeisha"
+  pm: "choirunnisasy"
 
 labels:
   - { name: "type:docs", color: "1d76db", desc: "Dokumen" }
