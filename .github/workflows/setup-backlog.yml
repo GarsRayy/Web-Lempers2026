@@ -11,6 +11,14 @@ on:
         description: "Opsional: labels,milestones,issues,project,assign (kosong = semua kecuali assign)"
         type: string
         default: ""
+      no_spread:
+        description: "Semua issue satu milestone memakai tanggal milestone yang sama (tanpa dijadwal berurutan)"
+        type: boolean
+        default: false
+      force_dates:
+        description: "Timpa Start date & Target date yang sudah terisi di Project (termasuk hasil drag manual)"
+        type: boolean
+        default: false
 
 jobs:
   setup:
@@ -30,9 +38,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           INPUT_DRY: ${{ inputs.dry_run }}
           INPUT_ONLY: ${{ inputs.only }}
+          INPUT_NO_SPREAD: ${{ inputs.no_spread }}
+          INPUT_FORCE_DATES: ${{ inputs.force_dates }}
         run: |
           chmod +x setup-github.sh
           args=()
           if [ "$INPUT_DRY" = "true" ]; then args+=(--dry-run); fi
           if [ -n "$INPUT_ONLY" ]; then args+=(--only "$INPUT_ONLY"); fi
+          if [ "$INPUT_NO_SPREAD" = "true" ]; then args+=(--no-spread); fi
+          if [ "$INPUT_FORCE_DATES" = "true" ]; then args+=(--force-dates); fi
           ./setup-github.sh "${args[@]}"
