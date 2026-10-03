@@ -4,6 +4,7 @@
 # Idempotent: aman dijalankan ulang. Yang sudah ada dilewati; yang baru ditambahkan.
 # Tidak pernah menghapus atau mengubah isi issue yang sudah ada.
 # Assignee: diambil dari bagian 'assignees' di backlog.yml (role -> username GitHub); kosong = dilewati.
+# Role tiap irisan: field 'r' di slices (bila kosong: UI -> fe, Live -> be).
 #
 # Pemakaian:  ./setup-github.sh --dry-run     (lihat dulu, tidak mengubah apa pun)
 #             ./setup-github.sh               (jalankan sungguhan)
@@ -91,10 +92,11 @@ read -r -d '' JQ_FLATTEN <<'JQ' || true
 def prio_name: {"M":"Must","S":"Should","C":"Could"};
 def bullets: map("- [ ] " + .) | join("\n");
 (.milestones | map({(.id): .title}) | add) as $mt
+| (.milestones | map({(.id): {start: (.start // null), due: (.due // null)}}) | add) as $md
 | (.assignees // {}) as $asg
 | [ .entries[] as $e
     | $e.slices[] as $s
-    | (if $s.t == "UI" then "fe" elif $s.t == "Live" then "be" else ($s.r // "") end) as $role
+    | ($s.r // (if $s.t == "UI" then "fe" elif $s.t == "Live" then "be" else "" end)) as $role
     | (if $s.t == "Full" then "[\($e.id)]" else "[\($e.id)][\($s.t)]" end) as $prefix
     | ($e.slices | length) as $n
     | {
@@ -102,6 +104,8 @@ def bullets: map("- [ ] " + .) | join("\n");
         role: $role,
         assignee: (($asg[$role] // "") | tostring),
         milestone: ($mt[$s.m] // error("milestone '\($s.m)' (di \($e.id)) tidak ada di bagian milestones")),
+        start: ($md[$s.m].start // null),
+        due: ($md[$s.m].due // null),
         points: ($s.p // null),
         prio: (if $e.prio then prio_name[$e.prio] else null end),
         gate: ($s.g // null),
@@ -109,10 +113,8 @@ def bullets: map("- [ ] " + .) | join("\n");
           ["type:\($e.kind)"]
           + (if $e.prio then ["prio:" + (prio_name[$e.prio] | ascii_downcase)] else [] end)
           + (if $e.epic then ["epic:\($e.epic)"] else [] end)
-          + (if $s.t == "UI" then ["slice:ui", "role:fe"]
-             elif $s.t == "Live" then ["slice:live", "role:be"]
-             elif $s.r then ["role:\($s.r)"]
-             else [] end)
+          + (if $s.t == "UI" then ["slice:ui"] elif $s.t == "Live" then ["slice:live"] else [] end)
+          + (if $role != "" then ["role:\($role)"] else [] end)
           + (if $s.g then ["gate:\($s.g)"] else [] end)
           + ($e.labels // [])
         ),
@@ -125,7 +127,7 @@ def bullets: map("- [ ] " + .) | join("\n");
              else "" end)
           + (if $n > 1 then "_Story ini dipecah per irisan: UI di \($e.slices[0].m), Live di \($e.slices[1].m)._\n\n" else "" end)
           + "**Ref:** \($e.ref // "-") · **Poin irisan ini:** \($s.p // "-") · **Gerbang Charter:** \($s.g // "-")\n\n"
-          + "<sub>Sumber: PRD.md & Guide.md · dibuat oleh setup-github.sh</sub>"
+          + "<sub>Sumber: SKPL (GL01-SKPL Rev E) & Project Charter · dibuat oleh setup-github.sh</sub>"
         )
       }
   ]
@@ -187,7 +189,7 @@ step_labels() {
 # ---------- langkah 2: milestone ----------
 step_milestones() {
   info "Milestone"
-  local existing="" m title due desc
+  local existing="" m title due desc start
   if [ "$AUTH" = 1 ]; then
     existing="$(gh api "repos/$REPO/milestones?state=all&per_page=100" --paginate --jq '.[].title' </dev/null)"
   fi
@@ -195,6 +197,8 @@ step_milestones() {
     title="$(jq -r '.title' <<<"$m")"
     due="$(jq -r '.due // empty' <<<"$m")"
     desc="$(jq -r '.desc // ""' <<<"$m")"
+    start="$(jq -r '.start // empty' <<<"$m")"
+    if [ -n "$start" ]; then desc="$desc (Mulai: $start)"; fi
     if grep -Fxq -- "$title" <<<"$existing"; then
       log "  = sudah ada: $title"
       continue
@@ -270,13 +274,14 @@ step_project() {
 
   if [ "$DRY" = 1 ]; then
     log "  [dry-run] project: \"$ptitle\" (owner: $OWNER) — dibuat bila belum ada, lalu ditautkan ke $REPO"
-    log "  [dry-run] field : Poin (NUMBER) · Prioritas (Must/Should/Could) · Gerbang Charter (M3..M9)"
+    log "  [dry-run] field : Poin (NUMBER) · Prioritas (Must/Should/Could) · Gerbang Charter (M1..M9) · Mulai & Tenggat (DATE)"
     log "  [dry-run] status: memakai field bawaan Status (Todo/In Progress/Done)"
-    jq -r '.[] | "  [dry-run] item  : \(.title)  (poin \(.points // "-") | \(.prio // "-") | \(.gate // "-"))"' <<<"$ISSUES"
+    log "  [dry-run] view  : Roadmap (layout roadmap) — dibuat bila belum ada, lewat REST API"
+    jq -r '.[] | "  [dry-run] item  : \(.title)  (poin \(.points // "-") | \(.prio // "-") | \(.gate // "-") | \(.start // "-") → \(.due // "-"))"' <<<"$ISSUES"
     return 0
   fi
 
-  local num pid fields issues_json i title url item points prio gate plist me POWNER="$OWNER"
+  local num pid fields issues_json i title url item points prio gate dstart ddue plist me POWNER="$OWNER"
   if me="$(gh api user --jq .login </dev/null 2>/dev/null)" && [ "$me" = "$OWNER" ]; then POWNER="@me"; fi
   if ! plist="$(gh project list --owner "$POWNER" --limit 100 --format json </dev/null 2>&1)"; then
     die "Gagal mengakses GitHub Project milik '$OWNER': $plist
@@ -307,14 +312,23 @@ step_project() {
   fi
   if ! has_field "Gerbang Charter"; then
     gh project field-create "$num" --owner "$POWNER" --name "Gerbang Charter" --data-type SINGLE_SELECT \
-      --single-select-options "M3,M4,M5,M6,M7,M8,M9" </dev/null >/dev/null
+      --single-select-options "M1,M2,M3,M4,M5,M6,M7,M8,M9" </dev/null >/dev/null
     log "  + field: Gerbang Charter"
+  fi
+  if ! has_field "Mulai"; then
+    gh project field-create "$num" --owner "$POWNER" --name "Mulai" --data-type DATE </dev/null >/dev/null
+    log "  + field: Mulai"
+  fi
+  if ! has_field "Tenggat"; then
+    gh project field-create "$num" --owner "$POWNER" --name "Tenggat" --data-type DATE </dev/null >/dev/null
+    log "  + field: Tenggat"
   fi
   fields="$(gh project field-list "$num" --owner "$POWNER" --limit 50 --format json </dev/null)"
   fid() { jq -r --arg n "$1" '.fields[] | select(.name == $n) | .id' <<<"$fields"; }
   oid() { jq -r --arg n "$1" --arg o "$2" '.fields[] | select(.name == $n) | .options[] | select(.name == $o) | .id' <<<"$fields"; }
-  local f_poin f_prio f_gate
+  local f_poin f_prio f_gate f_start f_due
   f_poin="$(fid "Poin")"; f_prio="$(fid "Prioritas")"; f_gate="$(fid "Gerbang Charter")"
+  f_start="$(fid "Mulai")"; f_due="$(fid "Tenggat")"
 
   issues_json="$(gh issue list --repo "$REPO" --state all --limit 1000 --json title,url </dev/null)"
   local added=0
@@ -326,6 +340,14 @@ step_project() {
     points="$(jq -r '.points // empty' <<<"$i")"
     prio="$(jq -r '.prio // empty' <<<"$i")"
     gate="$(jq -r '.gate // empty' <<<"$i")"
+    dstart="$(jq -r '.start // empty' <<<"$i")"
+    ddue="$(jq -r '.due // empty' <<<"$i")"
+    if [ -n "$dstart" ]; then
+      gh project item-edit --id "$item" --project-id "$pid" --field-id "$f_start" --date "$dstart" </dev/null >/dev/null
+    fi
+    if [ -n "$ddue" ]; then
+      gh project item-edit --id "$item" --project-id "$pid" --field-id "$f_due" --date "$ddue" </dev/null >/dev/null
+    fi
     if [ -n "$points" ]; then
       gh project item-edit --id "$item" --project-id "$pid" --field-id "$f_poin" --number "$points" </dev/null >/dev/null
     fi
@@ -342,6 +364,26 @@ step_project() {
   done 3< <(jq -c '.[]' <<<"$ISSUES")
   log ""
   log "  Item diproses: $added (menambah ulang item yang sudah ada tidak membuat duplikat)"
+
+  # view Roadmap (REST API; user-owned butuh PAT classic scope 'project', bukan fine-grained)
+  local views kind uid
+  views="$(gh api graphql -f query='query($id:ID!){node(id:$id){... on ProjectV2{views(first:50){nodes{name}}}}}' -f id="$pid" \
+    --jq '.data.node.views.nodes[].name' </dev/null 2>/dev/null || true)"
+  if grep -Fxq -- "Roadmap" <<<"$views"; then
+    log "  = view sudah ada: Roadmap"
+  else
+    kind="$(gh api "users/$OWNER" --jq .type </dev/null 2>/dev/null || true)"
+    if [ "$kind" = "Organization" ]; then
+      gh api -X POST "orgs/$OWNER/projectsV2/$num/views" -H "X-GitHub-Api-Version: 2026-03-10" \
+        -f name="Roadmap" -f layout="roadmap" </dev/null >/dev/null 2>&1 \
+        && log "  + view: Roadmap" || warn "Gagal membuat view Roadmap otomatis. Buat manual: New view -> Roadmap."
+    else
+      uid="$(gh api "users/$OWNER" --jq .id </dev/null 2>/dev/null || true)"
+      gh api -X POST "users/$uid/projectsV2/$num/views" -H "X-GitHub-Api-Version: 2026-03-10" \
+        -f name="Roadmap" -f layout="roadmap" </dev/null >/dev/null 2>&1 \
+        && log "  + view: Roadmap" || warn "Gagal membuat view Roadmap otomatis (butuh PAT classic scope 'project'). Buat manual: New view -> Roadmap."
+    fi
+  fi
 }
 
 # ---------- jalankan ----------
@@ -355,5 +397,5 @@ info "Selesai$( [ "$DRY" = 1 ] && printf ' (DRY-RUN: tidak ada yang diubah)' )"
 if [ "$DRY" = 1 ]; then
   log "  Jika rencana sudah sesuai, jalankan tanpa --dry-run."
 else
-  log "  Langkah manual: buat tampilan (Board/Table/Roadmap) di GitHub Project; belum bisa dibuat lewat gh."
+  log "  Cek view Roadmap di GitHub Project: pastikan pengaturan tanggalnya memakai field Mulai & Tenggat. View lain (Board/Table) dibuat manual bila perlu."
 fi
