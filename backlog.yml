@@ -1,932 +1,776 @@
-# backlog.yml — sumber data tunggal untuk setup-github.sh
-# Sumber: PRD.md & Guide.md (1 Okt 2026), diselaraskan dengan SKPL Rev D (pembayaran DOKU). Ubah di sini, lalu jalankan ulang skrip (idempotent).
-#
-# Konvensi:
-#   - Milestone repo = Iterasi XP (I1-I9) + "Fase Berikutnya".
-#   - Milestone Charter (M3-M9) = field "Gerbang Charter" di GitHub Project + label gate:Mx.
-#   - Story yang UI-nya dan Live-nya jatuh di iterasi berbeda dipecah jadi 2 issue (slices).
-#   - Poin per irisan memakai rasio UI:Live = 40:60 dari poin story (kalibrasi ulang setelah I1).
-#   - prio: M = Must, S = Should, C = Could.
-#   - slices: t = UI | Live | Full, m = id milestone, p = poin, g = gerbang Charter, r = role (untuk Full).
+# backlog.yml — sumber data untuk setup-github.sh
+# Sumber: SKPL (GL01-SKPL Rev E) & Project Charter. Jadwal M1–M9 = Schedule Estimate Charter (tidak diubah); M10 = fase berikutnya.
+# Di luar scope (sengaja tidak ada): pelaporan/aduan (SKPL-F-10), migrasi kode, migrasi artikel Medium, komentar publik, live chat.
+# Tim 4 orang: PM, FE, BE, QA (tanpa role UI/UX). Beban rilis 1 dibagi rata: 16 issue & 43 poin per orang.
+# Milestone: start & due (YYYY-MM-DD) dipakai untuk field tanggal di GitHub Project (Mulai/Tenggat). M10 tanpa tanggal.
+# Skema entri: id, title, kind, prio (M/S/C), epic, story, notes, ac[], ref, labels[], slices[{t: UI|Live|Full, m, p, g, r}]
 
 repo: GarsRayy/Web-Lempers2026
 
 project:
-  title: "Lempers 2026 - XP Board"
+  title: "Lempers 2026 - XP Board"
 
 # Penanggung jawab per role (username GitHub). Kosong = tidak di-assign (label role:xx tetap dipasang).
-# Username harus kolaborator repo (sudah cocok dengan daftar Manage access). Ubah lalu jalankan:  ./setup-github.sh --only assign
+# Username harus kolaborator repo (sudah cocok dengan daftar Manage access). Ubah lalu jalankan:  ./setup-github.sh --only assign
 assignees:
-  fe: "7refisa"         # Refi Ikhsanti
-  be: "GarsRayy"        # Garis Rayya Rabbani
-  qa: "keiralakeisha"   # Keira Lakeisha Fachra Fuady
-  pm: "choirunnisasy"   # Choirunnisa Syawaldina
-
-milestones:
-  - {id: I1, title: "I1 - Fondasi & Walking Skeleton", due: "2026-10-04", desc: "28 Sep-4 Okt. Situs ter-deploy otomatis, spike editor RTE, ERD final, pertanyaan terbuka blocker diputuskan."}
-  - {id: I2, title: "I2 - FE Publik + Fondasi Data", due: "2026-10-11", desc: "5-11 Okt. Halaman publik dengan data dummy, editor artikel (UI), skema DB, CI lengkap."}
-  - {id: I3, title: "I3 - FE Admin & Alur (M3)", due: "2026-10-18", desc: "12-18 Okt. Seluruh UI admin & alur pengguna (dummy). Gerbang Charter M3. Demo R1 ke mitra Jumat 16 Okt."}
-  - {id: I4, title: "I4 - Backend Editorial", due: "2026-10-25", desc: "19-25 Okt. Alur editorial end-to-end dengan data nyata + RBAC server."}
-  - {id: I5, title: "I5 - Publik Live + Mulai Produk (M4)", due: "2026-11-01", desc: "26 Okt-1 Nov. Situs publik memakai data nyata, fondasi modul produk. Gerbang Charter M4. Demo R2 Jumat 30 Okt."}
-  - {id: I6, title: "I6 - Produk E2E + Dashboard (M5, M6)", due: "2026-11-08", desc: "2-8 Nov. Feature complete. Gerbang Charter M5 dan M6. Demo R3 Jumat 6 Nov. Feature freeze Minggu 8 Nov."}
-  - {id: I7, title: "I7 - Internal Testing & Bug Fixing (M7)", due: "2026-11-15", desc: "9-15 Nov. Hardening, tanpa fitur baru. Gerbang Charter M7. Release candidate Minggu 15 Nov."}
-  - {id: I8, title: "I8 - UAT (M8)", due: "2026-11-22", desc: "16-22 Nov. UAT bersama mitra dengan akun asli. Gerbang Charter M8."}
-  - {id: I9, title: "I9 - Deployment & Handover (M9)", due: "2026-11-29", desc: "23-29 Nov. Go-live (target Rab 25 Nov), handover, sign-off Project Charter. Batas akhir proyek."}
-  - {id: NEXT, title: "Fase Berikutnya", due: null, desc: "Di luar rilis pertama: fitur yang ditunda atau dipangkas."}
+  fe: "7refisa"         # Refi Ikhsanti
+  be: "GarsRayy"        # Garis Rayya Rabbani
+  qa: "keiralakeisha"   # Keira Lakeisha Fachra Fuady
+  pm: "choirunnisasy"   # Choirunnisa Syawaldina
 
 labels:
-  # tipe
-  - {name: "type:story", color: "1d76db", desc: "User story dari PRD"}
-  - {name: "type:enabler", color: "5319e7", desc: "Pekerjaan teknis fondasi"}
-  - {name: "type:spike", color: "d4c5f9", desc: "Riset/uji kelayakan berbatas waktu"}
-  - {name: "type:decision", color: "fbca04", desc: "Pertanyaan terbuka yang perlu diputuskan"}
-  - {name: "type:doc", color: "0e8a16", desc: "Dokumen/deliverable akademik"}
-  - {name: "type:qa", color: "bfdadc", desc: "Aktivitas pengujian"}
-  - {name: "type:uat", color: "c2e0c6", desc: "Aktivitas UAT bersama mitra"}
-  - {name: "type:release", color: "006b75", desc: "Deployment & handover"}
-  - {name: "type:backlog", color: "ededed", desc: "Ditunda ke fase berikutnya"}
-  - {name: "type:bug", color: "d73a4a", desc: "Bug"}
-  # prioritas
-  - {name: "prio:must", color: "b60205", desc: "Must - syarat penerimaan Charter"}
-  - {name: "prio:should", color: "d93f0b", desc: "Should - paling aman dipangkas"}
-  - {name: "prio:could", color: "fef2c0", desc: "Could - usulan, pertama dipangkas"}
-  # epic
-  - {name: "epic:0-fondasi", color: "0052cc", desc: "Enabler & spike teknis"}
-  - {name: "epic:A-akun", color: "0052cc", desc: "Akun & RBAC"}
-  - {name: "epic:B-profil", color: "0052cc", desc: "Profil organisasi"}
-  - {name: "epic:C-berita", color: "0052cc", desc: "Berita & CMS"}
-  - {name: "epic:D-produk", color: "0052cc", desc: "Produk & pemesanan"}
-  - {name: "epic:E-aduan", color: "0052cc", desc: "Layanan aduan"}
-  - {name: "epic:F-dashboard", color: "0052cc", desc: "Dashboard & log"}
-  - {name: "epic:G-umum", color: "0052cc", desc: "Umum & rilis"}
-  # irisan & peran
-  - {name: "slice:ui", color: "a2eeef", desc: "Irisan UI dengan data dummy"}
-  - {name: "slice:live", color: "7057ff", desc: "Irisan terhubung backend/data nyata"}
-  - {name: "role:fe", color: "f9d0c4", desc: "Penanggung jawab utama: Front End"}
-  - {name: "role:be", color: "c5def5", desc: "Penanggung jawab utama: Back End"}
-  - {name: "role:qa", color: "bfd4f2", desc: "Penanggung jawab utama: QA"}
-  - {name: "role:pm", color: "e99695", desc: "Penanggung jawab utama: PM"}
-  # gerbang Charter
-  - {name: "gate:M3", color: "006b75", desc: "Charter M3 - Front End selesai (18 Okt)"}
-  - {name: "gate:M4", color: "006b75", desc: "Charter M4 - Backend & Integrasi selesai (1 Nov)"}
-  - {name: "gate:M5", color: "006b75", desc: "Charter M5 - Fitur Produk Mitra selesai (8 Nov)"}
-  - {name: "gate:M6", color: "006b75", desc: "Charter M6 - Dashboard & Fitur Pendukung selesai (8 Nov)"}
-  - {name: "gate:M7", color: "006b75", desc: "Charter M7 - Internal Testing selesai (15 Nov)"}
-  - {name: "gate:M8", color: "006b75", desc: "Charter M8 - UAT selesai (22 Nov)"}
-  - {name: "gate:M9", color: "006b75", desc: "Charter M9 - Deployment & Handover selesai (29 Nov)"}
-  # severity bug & status
-  - {name: "sev:S1", color: "b60205", desc: "Blocker: alur utama mati / data bocor / terbit tanpa approval"}
-  - {name: "sev:S2", color: "d93f0b", desc: "Mayor: fitur salah tapi ada jalan pintas"}
-  - {name: "sev:S3", color: "fbca04", desc: "Minor: kosmetik"}
-  - {name: "needs-decision", color: "fbca04", desc: "Menunggu keputusan PM/mitra"}
-  - {name: "blocked", color: "b60205", desc: "Terhambat ketergantungan"}
+  - { name: "type:docs", color: "1d76db", desc: "Dokumen" }
+  - { name: "type:feature", color: "1d76db", desc: "Fitur sesuai SKPL" }
+  - { name: "type:nfr", color: "1d76db", desc: "Kebutuhan non-fungsional" }
+  - { name: "type:task", color: "1d76db", desc: "Pekerjaan proyek/teknis" }
+  - { name: "type:test", color: "1d76db", desc: "Pengujian" }
+  - { name: "prio:could", color: "b60205", desc: "MoSCoW: Could" }
+  - { name: "prio:must", color: "b60205", desc: "MoSCoW: Must" }
+  - { name: "prio:should", color: "b60205", desc: "MoSCoW: Should" }
+  - { name: "epic:auth", color: "5319e7", desc: "Autentikasi & RBAC" }
+  - { name: "epic:berita", color: "5319e7", desc: "Berita & CMS" }
+  - { name: "epic:dashboard", color: "5319e7", desc: "Dashboard analitik" }
+  - { name: "epic:mutu", color: "5319e7", desc: "Pengujian & UAT" }
+  - { name: "epic:platform", color: "5319e7", desc: "Platform, database, storage, deployment" }
+  - { name: "epic:produk", color: "5319e7", desc: "Produk mitra & pembayaran DOKU" }
+  - { name: "epic:profil", color: "5319e7", desc: "Profil organisasi" }
+  - { name: "epic:proyek", color: "5319e7", desc: "Perencanaan, desain, dokumentasi" }
+  - { name: "slice:live", color: "0e8a16", desc: "Irisan Live (data nyata)" }
+  - { name: "slice:ui", color: "0e8a16", desc: "Irisan UI (data dummy)" }
+  - { name: "role:be", color: "fbca04", desc: "Back-End Developer" }
+  - { name: "role:fe", color: "fbca04", desc: "Front-End Developer" }
+  - { name: "role:pm", color: "fbca04", desc: "Project Manager" }
+  - { name: "role:qa", color: "fbca04", desc: "Quality Assurance" }
+  - { name: "gate:M1", color: "c5def5", desc: "Gerbang Charter M1" }
+  - { name: "gate:M2", color: "c5def5", desc: "Gerbang Charter M2" }
+  - { name: "gate:M3", color: "c5def5", desc: "Gerbang Charter M3" }
+  - { name: "gate:M4", color: "c5def5", desc: "Gerbang Charter M4" }
+  - { name: "gate:M5", color: "c5def5", desc: "Gerbang Charter M5" }
+  - { name: "gate:M6", color: "c5def5", desc: "Gerbang Charter M6" }
+  - { name: "gate:M7", color: "c5def5", desc: "Gerbang Charter M7" }
+  - { name: "gate:M8", color: "c5def5", desc: "Gerbang Charter M8" }
+  - { name: "gate:M9", color: "c5def5", desc: "Gerbang Charter M9" }
+  - { name: "fase-2", color: "bfd4f2", desc: "Fase berikutnya (di luar rilis pertama)" }
+  - { name: "risk", color: "d93f0b", desc: "Terkait risiko di Project Charter" }
+
+milestones:
+  - { id: M1, start: "2026-09-07", title: "I1 — Perencanaan Proyek Selesai", due: "2026-10-04", desc: "Charter final (scope, tim, milestone), disetujui PM dan dikonfirmasi ke mitra." }
+  - { id: M2, start: "2026-10-05", title: "I2 — Analisis dan Desain Disetujui", due: "2026-10-11", desc: "Analisis kebutuhan, wireframe/desain UI seluruh halaman, dan skema database (termasuk state machine editorial) final." }
+  - { id: M3, start: "2026-10-12", title: "I3 — Front End Selesai", due: "2026-10-18", desc: "Seluruh komponen FE & user flow siap dengan data dummy, bisa didemokan di 360px dan 1024px." }
+  - { id: M4, start: "2026-10-12", title: "I4 — Backend & Integrasi Selesai", due: "2026-11-01", desc: "Backend, autentikasi, RBAC 4 role, dan alur editorial terhubung ke FE lewat API." }
+  - { id: M5, start: "2026-10-26", title: "I5 — Fitur Produk Mitra Selesai", due: "2026-11-08", desc: "Katalog, pemesanan, checkout & webhook DOKU aktif end-to-end; pesanan lunas otomatis." }
+  - { id: M6, start: "2026-10-26", title: "I6 — Dashboard Analitik & Fitur Pendukung Selesai", due: "2026-11-08", desc: "Dashboard, search & filter, tombol share, dan kompresi gambar terintegrasi penuh." }
+  - { id: M7, start: "2026-11-09", title: "I7 — Internal Testing & Bug Fixing Selesai", due: "2026-11-15", desc: "Tidak ada bug kritikal; Lighthouse Performance > 80 dan Accessibility > 90." }
+  - { id: M8, start: "2026-11-16", title: "I8 — User Acceptance Test (UAT) Selesai", due: "2026-11-22", desc: "Mitra menguji dengan akun asli tiap role; disetujui PIC lewat form UAT sign-off." }
+  - { id: M9, start: "2026-11-23", title: "I9 — Deployment & Handover Selesai", due: "2026-11-29", desc: "Website live di Vercel, dokumentasi handover diserahkan, sign-off Charter ditandatangani." }
+  - { id: M10, title: "Fase Berikutnya (di luar rilis pertama)", desc: "Fitur ditunda/dipangkas dari rilis 1; dikerjakan hanya bila waktu masih ada setelah M9." }
 
 entries:
-  # ===================== ENABLER & SPIKE =====================
-  - id: TS-01
-    kind: enabler
-    epic: 0-fondasi
-    prio: M
-    title: "Setup repo Next.js + TypeScript, lint, preview deploy Vercel"
-    ref: "Guide I1"
-    notes: "Walking skeleton end-to-end."
-    ac:
-      - "Repo berjalan lokal dengan satu perintah"
-      - "Setiap PR otomatis mendapat preview URL"
-      - "Variabel lingkungan terdokumentasi di .env.example"
-    slices: [{t: Full, m: I1, p: 3, g: M3, r: be}]
 
-  - id: TS-02
-    kind: enabler
-    epic: 0-fondasi
+  # ---------- M1 — Perencanaan ----------
+  - id: P-01
+    title: "Rapat kick-off & koordinasi internal tim"
+    kind: task
     prio: M
-    title: "Migrasi kode dari basis kode lama"
-    ref: "SKPL 1.2, 2.3"
-    notes: "Bergantung pada OQ-04 (repo/basis kode mana yang dimigrasi)."
+    epic: proyek
+    ref: "Charter 1.1"
+    notes: "Charter 1.1. Tim 4 orang (PM, FE, BE, QA) tanpa role UI/UX: desain UI dikerjakan bersama FE & PM."
     ac:
-      - "Daftar item yang dimigrasi tertulis"
-      - "Deployment dan konfigurasi domain tetap berjalan setelah migrasi"
-    slices: [{t: Full, m: I1, p: 3, g: M3, r: be}]
-    labels: ["blocked"]
-
-  - id: TS-03
-    kind: enabler
-    epic: 0-fondasi
+      - "Pembagian peran & beban kerja disepakati semua anggota"
+      - "Kanal komunikasi dan jadwal rapat rutin ditetapkan"
+    slices:
+      - { t: Full, m: M1, p: 1, g: M1, r: pm }
+  - id: P-02
+    title: "Finalisasi Project Charter & konfirmasi ke mitra"
+    kind: docs
     prio: M
-    title: "Design tokens & komponen dasar sesuai guideline visual"
-    ref: "Charter (Notes)"
-    notes: "Bergantung pada guideline visual dari Kepala Divisi Desain (OQ-09)."
+    epic: proyek
+    ref: "Charter Milestone 1"
     ac:
-      - "Token warna/tipografi/spasi sesuai guideline visual mitra"
-      - "Komponen dasar lolos di 360px dan 1024px"
-    slices: [{t: Full, m: I1, p: 3, g: M3, r: fe}]
-
-  - id: SP-01
-    kind: spike
-    epic: 0-fondasi
+      - "Charter final memuat scope, tim, milestone, risiko, biaya, dan jadwal"
+      - "Disetujui Project Manager dan dikonfirmasi ke UKM Lembaga Pers ITERA"
+    slices:
+      - { t: Full, m: M1, p: 2, g: M1, r: pm }
+  - id: P-03
+    title: "Wawancara & observasi kebutuhan mitra"
+    kind: task
     prio: M
-    title: "Spike Rich Text Editor di layar 360px"
-    ref: "Charter risiko High"
-    notes: "Memitigasi risiko High dari Charter sebelum CMS dibangun. Kandidat awal: Tiptap, Lexical."
+    epic: proyek
+    ref: "Charter 2.1 · SKPL 1.5"
+    notes: "Sudah dilaksanakan 14 Sep 2026 di Sekretariat UKM Lembaga Pers (Student Center ITERA) bersama Arvel Alyagin & Nahli Saud Ramdani. Boleh langsung ditutup bila bukti sudah ada."
     ac:
-      - "Kesimpulan tertulis maksimal 1 halaman memilih editor"
-      - "Uji lulus: mengetik, format teks, sisip gambar, tempel teks di 360px (Chrome Android dan Safari iOS) tanpa horizontal scroll"
-    slices: [{t: Full, m: I1, p: 2, g: M3, r: fe}]
-
-  - id: TS-04
-    kind: enabler
-    epic: 0-fondasi
+      - "Formulir wawancara (PTI-01/2026) terdokumentasi"
+      - "Kebutuhan mitra tercatat sebagai dasar SKPL"
+    slices:
+      - { t: Full, m: M1, p: 2, g: M1, r: qa }
+  - id: P-04
+    title: "Setup repository GitHub, label, milestone & Project board"
+    kind: task
     prio: M
-    title: "Skema database dari ERD + migrasi + RLS + seed"
-    ref: "SKPL D1-D4"
-    notes: "Memerlukan ERD final (DOC-01). Tambahan di luar SKPL: slot_foto, log_aktivitas, laporan, serta data pembayaran DOKU dan log webhook (lihat OQ-01, OQ-05, OQ-11). Skema pesanan mengikuti SKPL Rev D (tanpa bukti_bayar manual)."
+    epic: proyek
+    ref: "Charter Milestone 1"
     ac:
-      - "Migrasi bisa dijalankan ulang dari nol"
-      - "RLS aktif pada tabel sensitif"
-      - "Seed memuat 4 peran contoh"
-      - "Indeks untuk pencarian berita dirancang"
-    slices: [{t: Full, m: I2, p: 5, g: M4, r: be}]
-
-  - id: TS-05
-    kind: enabler
-    epic: 0-fondasi
+      - "Repo, branch strategy, dan aturan PR siap"
+      - "Label, milestone M1–M10, issue, dan Project dibuat lewat setup-github.sh"
+      - "Keempat anggota menjadi kolaborator repo"
+    slices:
+      - { t: Full, m: M1, p: 1, g: M1, r: be }
+  - id: P-05
+    title: "Konfirmasi guideline visual (warna, tipografi, logo resmi) ke mitra"
+    kind: task
     prio: M
-    title: "CI: lint, typecheck, test, build, E2E smoke, Lighthouse CI"
-    ref: "Guide 8.3"
+    epic: proyek
+    ref: "Charter Notes"
+    notes: "Charter Notes: dikonfirmasi ke Kepala Divisi Desain Lembaga Pers paling lambat akhir Minggu 2."
     ac:
-      - "PR tidak bisa digabung bila lint/typecheck/test/build gagal"
-      - "E2E smoke (Playwright) berjalan pada preview"
-      - "Lighthouse CI melaporkan Performance dan Accessibility"
-    slices: [{t: Full, m: I2, p: 3, g: M4, r: be}]
+      - "Palet warna, tipografi, dan logo resmi diterima dari mitra"
+      - "Aset disimpan di folder aset repo"
+    slices:
+      - { t: Full, m: M1, p: 1, g: M1, r: fe }
 
-  - id: SP-02
-    kind: spike
-    epic: 0-fondasi
+  # ---------- M2 — Analisis & Desain ----------
+  - id: P-06
+    title: "Finalisasi SKPL (revisi F) selaras dengan scope Charter"
+    kind: docs
     prio: M
-    title: "Spike kompresi gambar maksimal 500 KB (client vs server)"
-    ref: "SKPL-NF-05"
+    epic: proyek
+    ref: "SKPL Rev E→F · Charter Milestone 2"
+    notes: "Selaraskan SKPL dengan Charter dan keputusan tim: hapus F-10 (pelaporan/aduan) dan semua rujukan migrasi kode; pembayaran lewat DOKU (bukan QRIS statis / bukti transfer); target Lighthouse mengikuti Charter (Performance > 80, Accessibility > 90)."
     ac:
-      - "Foto 5-10 MB menghasilkan maksimal 500 KB tanpa degradasi yang mengganggu"
-      - "Keputusan lokasi kompresi (client/server) tertulis"
-    slices: [{t: Full, m: I2, p: 2, g: M4, r: be}]
-
-  - id: SP-03
-    kind: spike
-    epic: 0-fondasi
+      - "Tidak ada lagi rujukan pelaporan/aduan dan migrasi kode di SKPL"
+      - "DFD, P-SPEC, dan tabel kerunutan konsisten dengan scope final"
+      - "Disetujui Project Manager"
+    slices:
+      - { t: Full, m: M2, p: 3, g: M2, r: qa }
+  - id: P-07
+    title: "Wireframe & desain UI halaman publik"
+    kind: task
     prio: M
-    title: "Spike provider email invoice (kuota, deliverability)"
-    ref: "SKPL-F-09"
-    notes: "Invoice dikirim otomatis dari handler webhook DOKU (US-21)."
+    epic: proyek
+    ref: "Charter Milestone 2 · SKPL 3.1.1"
     ac:
-      - "Email uji sampai ke Gmail dan email kampus (bukan spam)"
-      - "Kuota gratis mencukupi perkiraan volume pesanan"
-    slices: [{t: Full, m: I5, p: 2, g: M5, r: be}]
-
-  - id: SP-04
-    kind: spike
-    epic: 0-fondasi
+      - "Beranda, profil, daftar & detail berita, katalog, form pemesanan, status pesanan"
+      - "Mobile-first untuk 360px dan 1024px"
+      - "Mengikuti guideline visual mitra"
+    slices:
+      - { t: Full, m: M2, p: 3, g: M2, r: fe }
+  - id: P-08
+    title: "Wireframe & desain UI panel admin"
+    kind: task
     prio: M
-    title: "Spike integrasi DOKU di sandbox (checkout, webhook, signature, idempotensi)"
-    ref: "SKPL-F-08, SKPL-F-09"
-    notes: "Memitigasi risiko integrasi payment gateway (SKPL Rev D) sebelum US-20/US-21 dibangun. Memakai akun DOKU Sandbox untuk simulasi pembayaran; akun produksi dibahas di OQ-12. Poin usulan, kalibrasi ulang di planning."
+    epic: proyek
+    ref: "Charter Milestone 2 · SKPL 3.1.1"
     ac:
-      - "Sesi checkout berhasil dibuat dari server dan pemesan diarahkan ke halaman DOKU sandbox"
-      - "Webhook uji diterima di URL preview Vercel dan tanda tangannya (signature) tervalidasi"
-      - "Notifikasi ganda tidak menghasilkan efek ganda (idempoten)"
-      - "Kesimpulan tertulis maksimal 1 halaman: alur, metode bayar yang diaktifkan, keterbatasan"
-    slices: [{t: Full, m: I3, p: 2, g: M5, r: be}]
-
-  # ===================== EPIC A - AKUN & RBAC =====================
-  - id: US-01
-    kind: story
-    epic: A-akun
-    prio: M
-    title: "Login/logout admin"
-    ref: "SKPL-F-01"
-    story: "Sebagai Admin, saya ingin login/logout dengan email & kata sandi, agar dapat mengakses dashboard sesuai peran saya."
+      - "Login, editor CMS, antrean approval, kelola profil & akun, katalog admin, pesanan, dashboard"
+      - "Mobile-first untuk 360px dan 1024px"
+    slices:
+      - { t: Full, m: M2, p: 3, g: M2, r: pm }
+  - id: P-09
+    title: "Aset visual & komponen UI dasar (icon, tipografi, asset kit)"
+    kind: task
+    prio: S
+    epic: proyek
+    ref: "Charter 3.1"
     ac:
-      - "Kredensial valid masuk ke dashboard sesuai peran"
-      - "Kredensial salah menampilkan pesan Bahasa Indonesia yang tidak membocorkan field mana yang salah"
-      - "Sesi kedaluwarsa setelah masa inaktivitas (usulan 30 menit, ditetapkan tim)"
-      - "Kata sandi disimpan sebagai hash (bcrypt/argon2)"
-    slices: [{t: UI, m: I2, p: 1.2, g: M3}, {t: Live, m: I3, p: 1.8, g: M4}]
-
-  - id: US-02
-    kind: story
-    epic: A-akun
+      - "Asset kit dan komponen dasar siap dipakai di seluruh halaman"
+    slices:
+      - { t: Full, m: M2, p: 2, g: M2, r: fe }
+  - id: P-10
+    title: "Desain skema database & state machine editorial (ERD final)"
+    kind: task
     prio: M
-    title: "Pembatasan rute & API sesuai 4 peran (RBAC)"
-    ref: "SKPL-F-01"
-    story: "Sebagai Sistem, saya ingin membatasi rute dan API sesuai peran, agar pengguna hanya mengakses fitur haknya."
+    epic: platform
+    ref: "SKPL 3.2.5 & 3.3 · Charter Milestone 2"
+    labels: ["risk"]
     ac:
-      - "Akses di luar hak ditolak (403/redirect) di sisi server, bukan sekadar menu disembunyikan"
-      - "Admin Monitoring tidak bisa mengubah apa pun (diuji di level API)"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I4, p: 3, g: M4}]
-
-  - id: US-03
-    kind: story
-    epic: A-akun
+      - "Entitas PENGGUNA, PROFIL_ORGANISASI, ARTIKEL, KATALOG_PRODUK, PESANAN, plus tabel log aktivitas untuk dashboard"
+      - "State machine artikel: DRAFT → PENDING_APPROVAL → PUBLISHED / REJECTED"
+      - "Indeks untuk pencarian & filter kategori artikel"
+      - "Skema PostgreSQL (Supabase) siap diterapkan"
+    slices:
+      - { t: Full, m: M2, p: 3, g: M2, r: be }
+  - id: P-11
+    title: "Kontrak API REST (JSON) untuk UI dummy & integrasi"
+    kind: task
     prio: M
+    epic: platform
+    ref: "SKPL 3.1.4"
+    ac:
+      - "Daftar endpoint, request/response JSON, dan kode galat didokumentasikan"
+      - "FE dan BE sepakat kontrak sebelum M3 dimulai"
+    slices:
+      - { t: Full, m: M2, p: 2, g: M2, r: be }
+  - id: P-12
+    title: "Spike: pilih & validasi Rich Text Editor di layar 360px"
+    kind: task
+    prio: M
+    epic: berita
+    ref: "Charter Risiko · SKPL 3.5 poin 5"
+    labels: ["risk"]
+    notes: "Risiko High di Charter: editor yang tidak nyaman di HP menghambat Admin Bidang menulis berita."
+    ac:
+      - "Library RTE terpilih setelah dicoba di ponsel (360px)"
+      - "Mendukung format teks dan unggah gambar"
+    slices:
+      - { t: Full, m: M2, p: 2, g: M2, r: fe }
+  - id: P-13
+    title: "Rencana pengujian & skenario uji dari SKPL"
+    kind: test
+    prio: M
+    epic: mutu
+    ref: "SKPL 3.7"
+    ac:
+      - "Setiap SKPL-F dan SKPL-NF punya minimal satu skenario uji"
+      - "Skenario uji dapat dirunut ke ID kebutuhan"
+    slices:
+      - { t: Full, m: M2, p: 2, g: M2, r: qa }
+  - id: P-14
+    title: "Inisialisasi proyek Next.js, Supabase & preview Vercel"
+    kind: task
+    prio: M
+    epic: platform
+    ref: "SKPL 2.4 & 3.5"
+    ac:
+      - "Struktur proyek Next.js siap dan terhubung ke Supabase"
+      - "Preview deployment Vercel aktif untuk setiap PR"
+    slices:
+      - { t: Full, m: M2, p: 2, g: M2, r: be }
+
+  # ---------- FITUR — UI di M3, Live di M4/M5/M6 ----------
+  - id: F-01a
+    title: "Autentikasi & otorisasi akun (RBAC 4 role)"
+    kind: feature
+    prio: M
+    epic: auth
+    ref: "SKPL-F-01 · SKPL-NF-08 · SKPL 3.2.4.2.1"
+    story: "Sebagai pengelola, saya ingin login dengan email dan kata sandi agar hanya menu sesuai role saya yang bisa diakses."
+    notes: "4 role: Super Admin (1), Admin Bidang (3), Admin Monitoring (1), Admin Produk (1) = 6 akun. UI: halaman login + kerangka dashboard per role (dummy). Live: hash kata sandi, sesi, middleware RBAC, seed 6 akun."
+    ac:
+      - "Field kosong → \"Field tidak boleh kosong\"; email tak ada → \"Akun tidak ditemukan\"; sandi salah → \"Kata sandi salah\""
+      - "Kata sandi di-hash (bcrypt/argon2) dan sesi kedaluwarsa setelah tidak aktif"
+      - "Setelah login diarahkan ke dashboard sesuai role; akses lintas role ditolak"
+      - "Tampil benar di 360px dan 1024px tanpa horizontal scroll"
+    slices:
+      - { t: UI, m: M3, p: 2, g: M3, r: fe }
+      - { t: Live, m: M4, p: 4, g: M4, r: be }
+  - id: F-01b
     title: "Kelola akun pengguna (Super Admin)"
-    ref: "SKPL-F-01"
-    story: "Sebagai Super Admin, saya ingin membuat akun, mengubah peran, dan menonaktifkan akun, agar akses tim terkendali."
-    ac:
-      - "Super Admin dapat membuat akun, mengubah peran, menonaktifkan"
-      - "Akun nonaktif tidak bisa login tetapi riwayatnya tetap"
-      - "Komposisi 1/3/1/1 (total 6 akun) divalidasi"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I4, p: 3, g: M4}]
-
-  # ===================== EPIC B - PROFIL =====================
-  - id: US-04
-    kind: story
-    epic: B-profil
+    kind: feature
     prio: M
-    title: "Halaman profil UKM (publik)"
-    ref: "SKPL-F-02"
-    story: "Sebagai Pengunjung, saya ingin melihat profil UKM (visi-misi, sejarah, struktur, kode etik, foto, kontak), agar mengenal Lembaga Pers."
+    epic: auth
+    ref: "SKPL-F-01 · DFD 1.2"
+    story: "Sebagai Super Admin, saya ingin menambah, mengubah, dan menonaktifkan akun pengelola agar hak akses tetap terkendali."
+    notes: "Akun tidak dihapus permanen, hanya dinonaktifkan agar riwayat aktivitas tetap bisa ditelusuri (SKPL 3.3). Total akun pengelola maksimal 6."
     ac:
-      - "Menampilkan visi, misi, sejarah, struktur organisasi, foto kegiatan, kontak"
-      - "Kode etik tampil bila terisi"
-    slices: [{t: UI, m: I1, p: 1.2, g: M3}, {t: Live, m: I5, p: 1.8, g: M4}]
-
-  - id: US-05
-    kind: story
-    epic: B-profil
+      - "Super Admin dapat membuat akun dan menetapkan role"
+      - "Akun dapat dinonaktifkan/diaktifkan (status_aktif)"
+      - "Role lain tidak bisa membuka halaman ini"
+    slices:
+      - { t: UI, m: M3, p: 2, g: M3, r: pm }
+      - { t: Live, m: M4, p: 3, g: M4, r: be }
+  - id: F-02
+    title: "Pengelolaan konten profil organisasi"
+    kind: feature
     prio: M
-    title: "Edit konten profil tanpa developer"
-    ref: "SKPL-F-02"
-    story: "Sebagai Admin Bidang/Super Admin, saya ingin mengedit konten profil sendiri, agar tidak bergantung pada developer."
+    epic: profil
+    ref: "SKPL-F-02 · SKPL 3.2.4.2.2"
+    story: "Sebagai Super Admin, saya ingin mengubah visi-misi, sejarah, struktur, foto kegiatan, kode etik, dan kontak sendiri agar tidak perlu developer."
+    notes: "UI: halaman profil publik + form edit admin. Live: simpan ke DB dengan updated_at & updated_by, unggah foto ke storage."
     ac:
-      - "Setiap bagian profil dapat diedit"
-      - "Perubahan langsung tampil di halaman publik"
-      - "updated_at dan updated_by tercatat"
-      - "Foto kegiatan dikompres"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I5, p: 3, g: M4}]
-
-  # ===================== EPIC C - BERITA & CMS =====================
-  - id: US-06
-    kind: story
-    epic: C-berita
+      - "Seluruh konten profil dapat diubah dari admin tanpa developer"
+      - "Field wajib kosong → pesan galat dan tidak tersimpan"
+      - "Berhasil → \"Profil berhasil diperbarui\" dan tampil di halaman publik"
+    slices:
+      - { t: UI, m: M3, p: 3, g: M3, r: pm }
+      - { t: Live, m: M4, p: 3, g: M4, r: fe }
+  - id: F-03
+    title: "Penulisan draf berita (CMS)"
+    kind: feature
     prio: M
-    title: "Daftar dan detail berita (publik)"
-    ref: "SKPL-F-05"
-    story: "Sebagai Pengunjung, saya ingin membaca daftar dan detail berita terbit, agar mengikuti kabar kampus."
+    epic: berita
+    ref: "SKPL-F-03 · SKPL-NF-02"
+    labels: ["risk"]
+    story: "Sebagai Admin Bidang, saya ingin menulis artikel dengan rich text editor dan menyimpannya otomatis agar tulisan tidak hilang."
+    notes: "UI: editor (dummy), dropdown 4 rubrik, kredit foto, narator, indikator autosave. Live: CRUD artikel status DRAFT, unggah gambar, autosave 30–60 detik. Risiko Charter: autosave bergantung koneksi kampus."
     ac:
-      - "Hanya artikel berstatus Published yang tampil"
-      - "Menampilkan judul, kategori, narator, kredit foto, tanggal"
-      - "Tidak ada horizontal scroll di 360px"
-    slices: [{t: UI, m: I2, p: 2, g: M3}, {t: Live, m: I5, p: 3, g: M4}]
-
-  - id: US-07
-    kind: story
-    epic: C-berita
+      - "Rubrik: Kebijakan Kampus, Isu Sosial, Organisasi, Akademik"
+      - "Kredit foto dan narator wajib diisi sebelum diajukan"
+      - "Autosave berkala 30–60 detik menyimpan ke status Draft"
+      - "Editor nyaman dipakai di layar 360px"
+    slices:
+      - { t: UI, m: M3, p: 5, g: M3, r: pm }
+      - { t: Live, m: M4, p: 5, g: M4, r: fe }
+  - id: F-04
+    title: "Alur persetujuan editorial (Draft → Pending Approval → Published)"
+    kind: feature
     prio: M
-    title: "Pencarian dan filter kategori berita"
-    ref: "SKPL-F-05"
-    story: "Sebagai Pengunjung, saya ingin mencari kata kunci dan memfilter kategori, agar cepat menemukan berita."
+    epic: berita
+    ref: "SKPL-F-04 · SKPL 3.2.4.2.3"
+    labels: ["risk"]
+    story: "Sebagai Super Admin, saya ingin meninjau artikel yang diajukan lalu menyetujui atau menolaknya agar tidak ada artikel tayang tanpa approval."
+    notes: "UI: antrean Pending Approval, detail artikel, tombol Setujui/Tolak. Live: state machine di server; approve otomatis menjadi Published; reject → Rejected dan bisa disunting ulang. Notifikasi dibuat sederhana di dalam sistem (daftar/badge berbasis status), tanpa tabel baru. Risiko High di Charter."
     ac:
-      - "Pencarian pada judul/isi"
-      - "Filter 4 kategori (Kebijakan Kampus, Isu Sosial, Organisasi, Akademik)"
-      - "Hasil kosong menampilkan pesan"
-      - "Kueri didukung indeks DB"
-    slices: [{t: UI, m: I2, p: 1.2, g: M3}, {t: Live, m: I5, p: 1.8, g: M4}]
-
-  - id: US-08
-    kind: story
-    epic: C-berita
+      - "Admin Bidang hanya bisa Draft → Pending Approval, tidak bisa menerbitkan langsung"
+      - "Hanya Super Admin yang bisa approve/reject; approve langsung Published dan tayang di publik"
+      - "Transisi status yang tidak sah ditolak server"
+      - "Super Admin melihat antrean artikel Pending; Admin Bidang melihat status Published/Rejected"
+    slices:
+      - { t: UI, m: M3, p: 3, g: M3, r: qa }
+      - { t: Live, m: M4, p: 4, g: M4, r: be }
+  - id: F-05
+    title: "Pencarian & penyaringan berita"
+    kind: feature
     prio: M
-    title: "Menulis draf berita (RTE, media, kategori, narator & kredit foto)"
-    ref: "SKPL-F-03"
-    story: "Sebagai Admin Bidang, saya ingin menulis draf berita dengan rich text editor, agar bisa menyusun artikel lengkap."
-    notes: "Bergantung pada hasil SP-01 (pilihan editor)."
+    epic: berita
+    ref: "SKPL-F-05 · SKPL 3.2.4.2.4"
+    story: "Sebagai pengunjung, saya ingin mencari berita dengan kata kunci dan memfilter kategori agar cepat menemukan berita yang saya mau."
+    notes: "UI: daftar & detail berita, search bar, filter kategori. Live: query judul/isi + kategori hanya untuk artikel Published, dengan indeks DB (risiko Low di Charter)."
     ac:
-      - "Judul, isi, kategori (4), narator, dan kredit foto wajib diisi (validasi)"
-      - "Gambar utama dan sisip gambar (terkompresi)"
-      - "Format teks dasar tersedia"
-      - "Nyaman diketik di layar 360px"
-    slices: [{t: UI, m: I2, p: 3.2, g: M3}, {t: Live, m: I4, p: 4.8, g: M4}]
-
-  - id: US-09
-    kind: story
-    epic: C-berita
+      - "Kata kunci, filter kategori, atau keduanya bisa dipakai bersamaan"
+      - "Tidak ada hasil → \"Artikel tidak ditemukan\""
+      - "Hanya artikel Published yang muncul di publik"
+    slices:
+      - { t: UI, m: M3, p: 3, g: M3, r: qa }
+      - { t: Live, m: M6, p: 3, g: M6, r: pm }
+  - id: F-06
+    title: "Pengelolaan katalog produk mitra (Admin Produk)"
+    kind: feature
     prio: M
-    title: "Autosave draf"
-    ref: "SKPL-F-03, SKPL-NF-02"
-    story: "Sebagai Admin Bidang, saya ingin draf tersimpan otomatis, agar tulisan tidak hilang saat koneksi bermasalah."
+    epic: produk
+    ref: "SKPL-F-06 · SKPL 3.2.4.2.6"
+    story: "Sebagai Admin Produk, saya ingin mengelola katalog merchandise dan paket foto studio agar informasi produk selalu terbaru."
     ac:
-      - "Draf tersimpan otomatis setiap 30-60 detik bila ada perubahan"
-      - "Ada indikator 'tersimpan'"
-      - "Jika gagal, tampil peringatan dan dicoba ulang"
-      - "Isi tidak hilang setelah refresh"
-    slices: [{t: UI, m: I2, p: 1.2, g: M3}, {t: Live, m: I4, p: 1.8, g: M4}]
-
-  - id: US-10
-    kind: story
-    epic: C-berita
+      - "Tambah, ubah, dan arsipkan produk (jenis Merchandise / Foto Studio)"
+      - "Paket foto: Indoor, Outdoor, Photobooth"
+      - "Produk berstatus Diarsipkan tidak tampil di publik"
+    slices:
+      - { t: UI, m: M3, p: 3, g: M3, r: pm }
+      - { t: Live, m: M5, p: 3, g: M5, r: fe }
+  - id: F-07
+    title: "Pemesanan produk & reservasi jadwal foto studio"
+    kind: feature
     prio: M
-    title: "Ajukan draf & lihat status"
-    ref: "SKPL-F-04"
-    story: "Sebagai Admin Bidang, saya ingin mengajukan draf ke Super Admin dan melihat statusnya, agar alur terbit jelas."
+    epic: produk
+    ref: "SKPL-F-07 · SKPL 3.2.4.2.5"
+    story: "Sebagai pengunjung, saya ingin memesan merchandise atau memilih paket dan slot foto studio agar bisa memesan tanpa menghubungi admin."
+    notes: "UI: katalog publik + form pemesanan (dummy). Live: validasi, simpan pesanan berstatus MENUNGGU_PEMBAYARAN, pengecekan slot."
     ac:
-      - "Tombol 'Ajukan' mengubah Draft/Rejected menjadi Pending Approval"
-      - "Admin Bidang tidak dapat menerbitkan langsung"
-      - "Status draf terlihat jelas"
-    slices: [{t: UI, m: I3, p: 1.2, g: M3}, {t: Live, m: I4, p: 1.8, g: M4}]
-
-  - id: US-11
-    kind: story
-    epic: C-berita
+      - "Form: nama, alamat, nomor telepon, email; field kosong → pesan galat"
+      - "Foto studio wajib pilih paket dan slot hari & jam"
+      - "Slot yang sudah terisi tidak bisa dipesan ulang"
+    slices:
+      - { t: UI, m: M3, p: 5, g: M3, r: qa }
+      - { t: Live, m: M5, p: 5, g: M5, r: pm }
+  - id: F-08
+    title: "Pembayaran digital via DOKU (Checkout)"
+    kind: feature
     prio: M
-    title: "Approve/reject artikel (Super Admin) - state machine editorial"
-    ref: "SKPL-F-04"
-    story: "Sebagai Super Admin, saya ingin menyetujui (otomatis terbit) atau menolak artikel, agar hanya konten layak yang tayang."
-    notes: "Risiko High (Charter). Kerjakan dengan TDD dan berpasangan dengan QA."
+    epic: produk
+    ref: "SKPL-F-08 · Charter Milestone 5"
+    story: "Sebagai pengunjung, saya ingin membayar lewat halaman pembayaran DOKU tanpa mengunggah bukti transfer."
+    notes: "UI: halaman ringkasan pesanan & status pembayaran. Live: panggil API Checkout DOKU (sandbox), redirect ke halaman bayar. Tidak ada QRIS statis dan tidak ada unggah bukti transfer."
     ac:
-      - "Super Admin melihat antrean Pending Approval"
-      - "Approve mengubah status ke Published (published_at dan approved_by terisi)"
-      - "Reject mengubah status ke Rejected (+ catatan, lihat OQ-07)"
-      - "Transisi di luar state machine ditolak server"
-      - "Test mencakup semua transisi valid dan invalid; tidak ada jalur terbit tanpa approval"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I4, p: 3, g: M4}]
-
-  - id: US-12
-    kind: story
-    epic: C-berita
+      - "Pesanan valid menghasilkan link/halaman pembayaran DOKU"
+      - "Kredensial DOKU hanya di server (environment variable)"
+      - "Pembayaran gagal → status PEMBAYARAN_GAGAL dan pesan ke pengunjung"
+    slices:
+      - { t: UI, m: M3, p: 2, g: M3, r: qa }
+      - { t: Live, m: M5, p: 4, g: M5, r: be }
+  - id: F-09a
+    title: "Verifikasi pembayaran otomatis (webhook DOKU)"
+    kind: feature
     prio: M
-    title: "Penanda status artikel (antrean pending, catatan penolakan)"
-    ref: "SKPL-F-04"
-    story: "Sebagai Admin Bidang/Super Admin, saya ingin melihat penanda status, agar artikel tidak tertahan tanpa notifikasi."
+    epic: produk
+    ref: "SKPL-F-09 · SKPL 3.1.3 · Charter Milestone 5"
+    story: "Sebagai Admin Produk, saya ingin pesanan terverifikasi lunas otomatis agar tidak perlu mengecek bukti bayar manual."
     ac:
-      - "Admin Bidang melihat status dan catatan penolakan"
-      - "Super Admin melihat jumlah artikel menunggu persetujuan"
-      - "Versi minimal: indikator di dashboard; notifikasi email opsional"
-    slices: [{t: Full, m: I4, p: 3, g: M4, r: be}]
-
-  - id: US-13
-    kind: story
-    epic: C-berita
+      - "Endpoint webhook memverifikasi tanda tangan notifikasi DOKU"
+      - "Pembayaran sukses → payment_status PAID dan status MENUNGGU_KONFIRMASI"
+      - "Notifikasi ganda tidak mengubah data dua kali (idempoten)"
+      - "transaction_id dan payment_status tersimpan untuk audit"
+    slices:
+      - { t: Full, m: M5, p: 4, g: M5, r: be }
+  - id: F-09b
+    title: "Pemantauan & konfirmasi pesanan (Admin Produk)"
+    kind: feature
     prio: M
-    title: "Kompresi otomatis semua gambar unggahan (maksimal 500 KB)"
-    ref: "SKPL-NF-05"
-    story: "Sebagai Sistem, saya ingin mengompres semua gambar unggahan, agar kuota storage hemat dan halaman cepat."
+    epic: produk
+    ref: "SKPL-F-09 · SKPL 3.2.4.2.5"
+    story: "Sebagai Admin Produk, saya ingin melihat pesanan masuk dan mengonfirmasi jadwal foto studio agar pemesan mendapat kepastian."
+    notes: "Pesanan yang sudah PAID muncul sebagai antrean MENUNGGU_KONFIRMASI (notifikasi sederhana di dalam sistem). Status lunas juga tampil di halaman pesanan pengunjung."
     ac:
-      - "Semua unggahan gambar (artikel, profil, produk) maksimal 500 KB"
-      - "Hanya format gambar yang diizinkan"
-      - "File tidak valid atau terlalu besar ditolak dengan pesan jelas"
-    slices: [{t: Full, m: I4, p: 3, g: M6, r: be}]
-
-  - id: US-14
-    kind: story
-    epic: C-berita
+      - "Admin Produk melihat daftar pesanan beserta status pembayaran"
+      - "Foto studio: konfirmasi slot lalu status menjadi DIKONFIRMASI (atau DITOLAK)"
+      - "Data pesanan tidak bisa diubah setelah masuk selain status"
+    slices:
+      - { t: UI, m: M3, p: 3, g: M3, r: qa }
+      - { t: Live, m: M5, p: 3, g: M5, r: fe }
+  - id: F-11
+    title: "Dashboard analitik & log aktivitas"
+    kind: feature
+    prio: M
+    epic: dashboard
+    ref: "SKPL-F-11 · SKPL 3.2.4.2.7"
+    story: "Sebagai Admin Monitoring, saya ingin melihat grafik artikel per bulan, total pesanan, dan log aktivitas agar bisa memantau sistem."
+    notes: "Pengganti \"total laporan masuk\" di Charter: total pesanan masuk (sesuai SKPL 3.2.4.3.7), karena fitur pelaporan tidak ada. Admin Monitoring read-only."
+    ac:
+      - "Grafik jumlah artikel Published per bulan"
+      - "Rekap total pesanan masuk"
+      - "Log aktivitas berisi aksi, waktu, dan identitas akun"
+      - "Angka akurat sesuai aktivitas nyata; hanya Super Admin & Admin Monitoring yang bisa mengakses"
+    slices:
+      - { t: UI, m: M3, p: 3, g: M3, r: fe }
+      - { t: Live, m: M6, p: 5, g: M6, r: pm }
+  - id: F-12
+    title: "Tombol berbagi artikel ke WhatsApp & Instagram"
+    kind: feature
     prio: S
-    title: "Berbagi artikel ke WhatsApp & Instagram"
+    epic: berita
     ref: "SKPL-F-12"
-    story: "Sebagai Pengunjung, saya ingin membagikan artikel ke WhatsApp dan Instagram, agar berita menjangkau lebih luas."
-    notes: "Instagram tidak punya URL berbagi web resmi; usulan Web Share API di mobile + tombol 'Salin tautan' (OQ-08)."
+    story: "Sebagai pembaca, saya ingin membagikan artikel ke WhatsApp dan Instagram dengan satu klik."
     ac:
-      - "Tombol WhatsApp membuka tautan berbagi berisi judul + URL"
-      - "Tombol Instagram memakai Web Share API / salin tautan"
-      - "Tombol hanya muncul di halaman artikel"
-    slices: [{t: UI, m: I2, p: 0.8, g: M3}, {t: Live, m: I6, p: 1.2, g: M6}]
-
-  # ===================== EPIC D - PRODUK & PEMESANAN =====================
-  - id: US-15
-    kind: story
-    epic: D-produk
+      - "Tombol share ada di setiap artikel"
+      - "Link share membuka platform tujuan dengan URL artikel"
+    slices:
+      - { t: Full, m: M6, p: 2, g: M6, r: qa }
+  - id: NF-05
+    title: "Kompresi gambar otomatis (maks. 500 KB)"
+    kind: nfr
     prio: M
-    title: "Katalog merchandise & paket foto studio (publik)"
-    ref: "SKPL-F-06"
-    story: "Sebagai Pengunjung, saya ingin melihat katalog merchandise dan paket foto studio, agar tahu produk yang tersedia."
+    epic: platform
+    ref: "SKPL-NF-05 · Charter Milestone 6"
+    notes: "Seluruh unggahan (artikel, profil, produk) lewat StorageService: kompres lalu simpan ke Supabase Storage."
     ac:
-      - "Hanya produk berstatus Aktif yang tampil"
-      - "Dipisah Merchandise dan Foto Studio (Indoor / Outdoor / Photobooth)"
-      - "Menampilkan nama, harga, gambar, deskripsi"
-    slices: [{t: UI, m: I2, p: 1.2, g: M3}, {t: Live, m: I5, p: 1.8, g: M5}]
+      - "Setiap gambar yang diunggah berukuran akhir maksimal 500 KB"
+      - "Berlaku untuk artikel, foto kegiatan, dan gambar produk"
+      - "Hanya URL yang disimpan di database"
+    slices:
+      - { t: Full, m: M6, p: 3, g: M6, r: fe }
 
-  - id: US-16
-    kind: story
-    epic: D-produk
+  # ---------- M7 — Internal Testing & Bug Fixing ----------
+  - id: T-01
+    title: "Uji alur editorial & RBAC end-to-end"
+    kind: test
     prio: M
-    title: "Kelola katalog produk (Admin Produk)"
-    ref: "SKPL-F-06"
-    story: "Sebagai Admin Produk, saya ingin mengelola (CRUD/arsip) katalog, agar katalog selalu mutakhir."
+    epic: mutu
+    ref: "SKPL-F-01, F-04 · Charter Risiko"
+    labels: ["risk"]
     ac:
-      - "CRUD katalog produk"
-      - "Produk tidak dihapus permanen, tetapi diarsipkan"
-      - "Produk arsip hilang dari tampilan publik"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I5, p: 3, g: M5}]
-
-  - id: US-17
-    kind: story
-    epic: D-produk
+      - "Artikel tidak bisa tayang tanpa approval"
+      - "Transisi status tidak sah ditolak"
+      - "Tiap role hanya bisa mengakses haknya"
+    slices:
+      - { t: Full, m: M7, p: 3, g: M7, r: qa }
+  - id: T-02
+    title: "Uji alur pemesanan & pembayaran DOKU (sandbox)"
+    kind: test
     prio: M
-    title: "Kelola slot jadwal foto studio"
-    ref: "SKPL-F-06, SKPL-F-07"
-    story: "Sebagai Admin Produk, saya ingin mengelola slot jadwal foto studio, agar pemesan hanya memilih waktu yang tersedia."
-    notes: "Aturan jam operasional/durasi/kapasitas perlu dikonfirmasi (OQ-05)."
+    epic: mutu
+    ref: "SKPL-F-07, F-08, F-09"
     ac:
-      - "Admin Produk menetapkan slot (tanggal, jam, kapasitas)"
-      - "Slot penuh tidak bisa dipilih pemesan"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I6, p: 3, g: M5}]
-
-  - id: US-18
-    kind: story
-    epic: D-produk
+      - "Pembayaran sukses → status lunas otomatis tanpa verifikasi manual"
+      - "Pembayaran gagal → PEMBAYARAN_GAGAL"
+      - "Webhook ganda tidak membuat data ganda"
+      - "Slot foto studio yang bentrok ditolak"
+    slices:
+      - { t: Full, m: M7, p: 3, g: M7, r: qa }
+  - id: T-03
+    title: "Uji responsivitas 360px/1024px & lintas browser"
+    kind: test
     prio: M
-    title: "Form pemesanan merchandise"
-    ref: "SKPL-F-07"
-    story: "Sebagai Pengunjung, saya ingin memesan merchandise lewat form, agar bisa membeli tanpa login."
-    notes: "Field jumlah/total/kode pesanan belum ada di SKPL (OQ-05)."
-    ac:
-      - "Form (nama, alamat, no. telp, email, jumlah) tervalidasi"
-      - "Pesanan tercatat berstatus Menunggu Pembayaran (usulan; SKPL Rev D masih menulis 'Menunggu Verifikasi', diselaraskan di DOC-03)"
-      - "Kode pesanan unik dibuat"
-    slices: [{t: UI, m: I3, p: 1.2, g: M3}, {t: Live, m: I5, p: 1.8, g: M5}]
-
-  - id: US-19
-    kind: story
-    epic: D-produk
-    prio: M
-    title: "Reservasi foto studio tanpa double booking"
-    ref: "SKPL-F-07"
-    story: "Sebagai Pengunjung, saya ingin mereservasi paket foto studio dengan slot tersedia, agar jadwal saya terjamin."
-    notes: "Kerjakan dengan TDD, termasuk uji konkurensi. Karena pembayaran DOKU asinkron, slot ditahan sementara selama pembayaran (usulan; lihat OQ-11)."
-    ac:
-      - "Pilih paket lalu pilih slot dari yang tersedia"
-      - "Pengecekan ulang saat kirim: tidak terjadi double booking (diuji dengan dua permintaan bersamaan)"
-      - "Bentrok ditangani dengan pesan jelas"
-      - "Slot ditahan sementara selama pembayaran dan dilepas bila pembayaran gagal atau kedaluwarsa (usulan, lihat OQ-11)"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I6, p: 3, g: M5}]
-
-  - id: US-20
-    kind: story
-    epic: D-produk
-    prio: M
-    title: "Pembayaran digital via DOKU (checkout: QRIS dinamis, VA, e-wallet)"
-    ref: "SKPL-F-08"
-    story: "Sebagai Pengunjung, saya ingin membayar pesanan lewat halaman pembayaran DOKU, agar pembayaran terverifikasi otomatis tanpa mengunggah bukti."
-    notes: "Mengikuti SKPL Rev D (payment gateway DOKU). Bergantung pada OQ-12 (akun merchant) dan SP-04 (spike sandbox). Poin dinaikkan dari 3 ke 5 (usulan) karena integrasi gateway; kalibrasi ulang di planning."
-    ac:
-      - "Setelah form pesanan valid, sistem membuat sesi checkout DOKU dan mengarahkan pemesan ke halaman pembayaran"
-      - "Pemesan dapat memilih metode yang diaktifkan di DOKU (QRIS dinamis, virtual account, e-wallet)"
-      - "Tidak ada unggah bukti pembayaran"
-      - "Setelah bayar, pemesan kembali ke halaman status pesanan; status akhir hanya berubah lewat webhook, bukan lewat redirect"
-      - "Seluruh alur teruji di sandbox DOKU (sukses, gagal, kedaluwarsa)"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I6, p: 3, g: M5}]
-
-  - id: US-21
-    kind: story
-    epic: D-produk
-    prio: M
-    title: "Verifikasi pembayaran otomatis (webhook DOKU) & invoice email otomatis"
-    ref: "SKPL-F-09"
-    story: "Sebagai Sistem, saya ingin menerima notifikasi pembayaran dari DOKU lalu memperbarui status pesanan dan mengirim invoice, agar pemesan menerima invoice otomatis dan Admin Produk cukup memantau serta mengonfirmasi jadwal foto."
-    notes: "Mengikuti SKPL Rev D. Format invoice perlu dikonfirmasi (OQ-06). Bergantung pada SP-03 (email) dan SP-04 (webhook). Daftar status di bawah adalah usulan sampai SKPL direvisi: Menunggu Pembayaran, Dibayar, Kedaluwarsa, Gagal; konfirmasi jadwal foto oleh Admin Produk (OQ-11)."
-    ac:
-      - "Endpoint webhook memvalidasi tanda tangan (signature) DOKU; permintaan tidak valid ditolak dan tidak mengubah data"
-      - "Notifikasi sukses mengubah status pesanan menjadi Dibayar dan mengirim invoice ke email pemesan (kode, item, harga, slot bila ada)"
-      - "Notifikasi ganda atau berulang tidak mengirim invoice dua kali (idempoten)"
-      - "Pembayaran gagal atau kedaluwarsa tercatat dan slot foto dilepas"
-      - "Admin Produk melihat daftar pesanan beserta status pembayaran dan status pengiriman invoice"
-      - "Admin Produk dapat mengonfirmasi atau menolak request jadwal foto"
-      - "Data pesanan lain tidak bisa diubah (append-only, hanya status); setiap notifikasi webhook tersimpan sebagai log"
-    slices: [{t: UI, m: I3, p: 3.2, g: M3}, {t: Live, m: I6, p: 4.8, g: M5}]
-
-  - id: US-22
-    kind: story
-    epic: D-produk
-    prio: S
-    title: "Cek status pesanan (kode pesanan + email)"
-    ref: "SKPL-F-07 (diagram konteks)"
-    story: "Sebagai Pengunjung, saya ingin mengecek status pesanan, agar tahu perkembangan pesanan saya."
-    ac:
-      - "Memasukkan kode pesanan + email menampilkan status"
-      - "Tidak menampilkan data pesanan orang lain"
-    slices: [{t: Full, m: I6, p: 3, g: M5, r: fe}]
-
-  # ===================== EPIC E - ADUAN =====================
-  - id: US-23
-    kind: story
-    epic: E-aduan
-    prio: S
-    title: "Kirim laporan/aduan"
-    ref: "SKPL-F-10"
-    story: "Sebagai Pengunjung, saya ingin mengirim laporan/aduan, agar masukan sampai ke Lembaga Pers."
-    notes: "Bergantung pada OQ-01 (form internal vs tautan eksternal). Asumsi kerja: form internal tersimpan di DB."
-    ac:
-      - "Isi aduan wajib; nama/kontak opsional"
-      - "Aduan tersimpan dan terhitung di rekap dashboard"
-      - "Ada proteksi spam"
-      - "Bila diputuskan tautan eksternal: tombol tautan saja, metrik 'total laporan' didefinisikan ulang"
-    slices: [{t: UI, m: I2, p: 1.2, g: M3}, {t: Live, m: I6, p: 1.8, g: M6}]
-    labels: ["needs-decision"]
-
-  # ===================== EPIC F - DASHBOARD & LOG =====================
-  - id: US-24
-    kind: story
-    epic: F-dashboard
-    prio: M
-    title: "Log aktivitas otomatis"
-    ref: "SKPL-F-11"
-    story: "Sebagai Sistem, saya ingin mencatat aktivitas penting, agar riwayat dapat ditelusuri."
-    ac:
-      - "Login, CRUD, approval, verifikasi, dan perubahan akun tercatat (siapa, aksi, kapan, entitas)"
-      - "Log tidak bisa diubah/dihapus dari UI"
-    slices: [{t: Full, m: I5, p: 3, g: M6, r: be}]
-
-  - id: US-25
-    kind: story
-    epic: F-dashboard
-    prio: M
-    title: "Dashboard analitik (artikel per bulan, total laporan)"
-    ref: "SKPL-F-11"
-    story: "Sebagai Admin Monitoring/Super Admin, saya ingin melihat grafik artikel per bulan dan total laporan, agar performa publikasi terpantau."
-    ac:
-      - "Grafik artikel terbit per bulan"
-      - "Total laporan masuk"
-      - "Angka cocok dengan data sebenarnya (diuji dengan data seed)"
-      - "Chart terbaca di 360px"
-    slices: [{t: UI, m: I3, p: 2, g: M3}, {t: Live, m: I6, p: 3, g: M6}]
-
-  - id: US-26
-    kind: story
-    epic: F-dashboard
-    prio: M
-    title: "Akses read-only Admin Monitoring"
-    ref: "SKPL-F-01, SKPL-F-11"
-    story: "Sebagai Admin Monitoring, saya ingin akses read-only ke dashboard, log, dan rekap aduan, agar bisa memantau tanpa risiko mengubah data."
-    ac:
-      - "Dapat membuka dashboard, log aktivitas, rekap aduan"
-      - "Setiap aksi tulis ditolak"
-    slices: [{t: Full, m: I6, p: 2, g: M6, r: be}]
-
-  # ===================== EPIC G - UMUM & RILIS =====================
-  - id: US-27
-    kind: story
-    epic: G-umum
-    prio: M
-    title: "Beranda & navigasi responsif"
-    ref: "SKPL-NF-03, SKPL-NF-09"
-    story: "Sebagai Pengunjung, saya ingin beranda dan navigasi yang responsif, agar nyaman di HP maupun laptop."
-    ac:
-      - "Menu: Berita, Profil, Produk, Lapor"
-      - "Responsif 360px-1024px tanpa horizontal scroll"
-      - "Label dalam Bahasa Indonesia baku"
-    slices: [{t: Full, m: I1, p: 3, g: M3, r: fe}]
-
-  - id: US-28
-    kind: story
-    epic: G-umum
-    prio: C
-    title: "Pratinjau tautan artikel (Open Graph) - usulan"
-    ref: "SKPL-F-12 (usulan)"
-    story: "Sebagai Pengunjung, saya ingin tautan artikel menampilkan pratinjau saat dibagikan, agar terlihat rapi di WhatsApp."
-    notes: "Pertama dipangkas bila velocity kurang."
-    ac:
-      - "Setiap artikel memiliki judul, deskripsi, dan gambar pratinjau Open Graph"
-    slices: [{t: Full, m: I6, p: 2, g: M6, r: fe}]
-
-  - id: US-29
-    kind: story
-    epic: G-umum
-    prio: M
-    title: "Dokumentasi handover (upload, approve, akses Vercel)"
-    ref: "Charter M9"
-    story: "Sebagai PIC pasca-rilis, saya ingin dokumentasi handover, agar saya bisa mengoperasikan sistem tanpa bantuan developer."
-    notes: "Draf bertahap sejak I4; finalisasi di I9. Tambahan usulan: akses Supabase, kelola kredensial DOKU, reset akun, pemulihan proyek ter-pause."
-    ac:
-      - "Panduan upload artikel, approve, akses Vercel"
-      - "Dicoba oleh orang di luar tim sampai berhasil"
-      - "Tersedia sebagai file dan cetak"
-    slices: [{t: Full, m: I9, p: 5, g: M9, r: pm}]
-
-  - id: US-30
-    kind: story
-    epic: G-umum
-    prio: M
-    title: "Deployment produksi + domain + 6 akun awal"
-    ref: "Charter M9"
-    story: "Sebagai Tim, saya ingin deployment produksi di domain organisasi, agar situs dapat diakses publik."
-    notes: "Keputusan hosting (OQ-10) harus sudah final."
-    ac:
-      - "Situs live di domain dengan HTTPS"
-      - "Variabel lingkungan produksi terpasang"
-      - "6 akun awal dibuat"
-      - "Smoke test lulus"
-    slices: [{t: Full, m: I9, p: 5, g: M9, r: be}]
-
-  # ===================== PERTANYAAN TERBUKA (OQ) =====================
-  - id: OQ-01
-    kind: decision
-    title: "Aduan: form internal atau tautan eksternal?"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** SKPL-F-10 menyebut tautan ke formulir eksternal, sedangkan Lingkup Masalah/Charter menyebut formulir internal di web, dan dashboard memerlukan 'total laporan masuk'.
-
-      **Asumsi kerja:** form internal tersimpan di DB (tabel laporan). Jika eksternal, definisikan ulang metrik dashboard.
-
-      **Putuskan sebelum:** 5 Okt (UI I2). **Dampak:** US-23, US-25.
-    slices: [{t: Full, m: I1, r: pm}]
-
-  - id: OQ-02
-    kind: decision
-    title: "Konfirmasi pembayaran: payment gateway DOKU (SKPL Rev D) menggantikan QRIS statis"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** PRD dan Guide versi 1 Okt masih menulis QRIS statis + verifikasi manual (bersumber dari SKPL Rev C), sedangkan SKPL Rev D dan Charter memakai payment gateway DOKU dengan verifikasi webhook otomatis.
-
-      **Asumsi kerja:** DOKU, mengikuti SKPL Rev D. Backlog ini sudah disesuaikan.
-
-      **Putuskan sebelum:** 5 Okt. **Dampak:** US-20, US-21, TS-04, DOC-03, OQ-12.
-    ac:
-      - "PIC mitra dan dosen mengonfirmasi DOKU sebagai metode pembayaran"
-      - "Keputusan dicatat di log keputusan (Guide 13)"
-    slices: [{t: Full, m: I1, r: pm}]
-
-  - id: OQ-03
-    kind: decision
-    title: "Target Lighthouse: Charter vs SKPL"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** Charter menargetkan Performance > 80 dan Accessibility > 90; SKPL menyebut 75-80 dan 85-90.
-
-      **Asumsi kerja:** target = Charter; SKPL = batas minimum.
-
-      **Putuskan sebelum:** 12 Okt.
-    slices: [{t: Full, m: I2, r: pm}]
-
-  - id: OQ-04
-    kind: decision
-    title: "Basis kode lama: repo apa, apa yang dipertahankan, domain sudah ada?"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** SKPL menyebut migrasi kode dari basis kode lama demi konsistensi deployment dan domain, tetapi Charter menganggarkan pembelian domain baru.
-
-      **Asumsi kerja:** identifikasi di I1.
-
-      **Putuskan sebelum:** 2 Okt. **Dampak:** TS-02.
-    slices: [{t: Full, m: I1, r: be}]
-
-  - id: OQ-05
-    kind: decision
-    title: "Data pesanan kurang & aturan slot foto"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** data pesanan di SKPL tidak memuat jumlah, total harga, kode pesanan; aturan slot (jam operasional, durasi, kapasitas) belum ada.
-
-      **Asumsi kerja:** tambah jumlah, total, kode_pesanan, dan tabel slot_foto.
-
-      **Putuskan sebelum:** 12 Okt. **Dampak:** TS-04, US-17, US-18, US-19.
-    slices: [{t: Full, m: I2, r: pm}]
-
-  - id: OQ-06
-    kind: decision
-    title: "Format invoice (nomor, logo, alamat pengirim)"
-    labels: ["needs-decision"]
-    notes: |
-      **Asumsi kerja:** template sederhana; konfirmasi desain dengan mitra.
-
-      **Putuskan sebelum:** 25 Okt. **Dampak:** US-21.
-    slices: [{t: Full, m: I4, r: pm}]
-
-  - id: OQ-07
-    kind: decision
-    title: "Aturan hak akses implisit (kepemilikan draf, catatan penolakan, Super Admin di produk)"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** (a) apakah Admin Bidang hanya mengedit draf miliknya, (b) apakah penolakan wajib disertai catatan, (c) apakah Super Admin ikut mengelola produk/pesanan.
-
-      **Asumsi kerja:** (a) ya, (b) ya, (c) ya.
-
-      **Putuskan sebelum:** 12 Okt. **Dampak:** US-02, US-11.
-    slices: [{t: Full, m: I2, r: pm}]
-
-  - id: OQ-08
-    kind: decision
-    title: "Mekanisme berbagi ke Instagram"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** Instagram tidak punya URL berbagi web resmi.
-
-      **Asumsi kerja:** Web Share API (mobile) + tombol salin tautan.
-
-      **Putuskan sebelum:** 5 Okt (UI I2). **Dampak:** US-14.
-    slices: [{t: Full, m: I1, r: pm}]
-
-  - id: OQ-09
-    kind: decision
-    title: "Guideline visual dari Kepala Divisi Desain sudah diterima?"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** Charter menetapkan konfirmasi guideline visual (warna, tipografi, logo) paling lambat akhir Minggu 2 (+-20 Sep).
-
-      **Asumsi kerja:** bila belum, TS-03 menjadi blocker.
-
-      **Putuskan sebelum:** 2 Okt.
-    slices: [{t: Full, m: I1, r: pm}]
-
-  - id: OQ-10
-    kind: decision
-    title: "Hosting gratis vs berbayar (Vercel Hobby, Supabase free) dan anggaran"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** Vercel Hobby dibatasi untuk penggunaan non-komersial (situs ini menjual produk/jasa), dan proyek Supabase free tier otomatis pause setelah sekitar 1 minggu tanpa aktivitas. Anggaran total Charter Rp 1.000.000.
-
-      **Asumsi kerja:** mulai dengan free tier + mitigasi (keep-alive, prosedur pemulihan); konfirmasi ke Vercel Support; putuskan sebelum I9.
-
-      **Putuskan sebelum:** 8 Nov. **Dampak:** US-30, US-29.
-    slices: [{t: Full, m: I6, r: pm}]
-
-  - id: OQ-11
-    kind: decision
-    title: "Urutan reservasi foto studio: bayar dulu atau konfirmasi jadwal dulu? Berapa lama slot ditahan?"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** SKPL Rev D menyebut Admin Produk mengonfirmasi request jadwal foto, sedangkan pembayaran kini otomatis lewat DOKU. Belum jelas apakah pemesan membayar sebelum atau sesudah jadwal dikonfirmasi, dan apa yang terjadi pada slot selama pembayaran berlangsung.
-
-      **Asumsi kerja:** pemesan memilih slot, slot ditahan sementara, pemesan membayar, lalu Admin Produk mengonfirmasi jadwal; slot dilepas bila pembayaran gagal atau kedaluwarsa. Lama penahanan ditetapkan tim bersama mitra.
-
-      **Putuskan sebelum:** 12 Okt. **Dampak:** US-17, US-19, US-21.
-    slices: [{t: Full, m: I2, r: pm}]
-
-  - id: OQ-12
-    kind: decision
-    title: "Akun merchant DOKU produksi: pemilik, dokumen, biaya transaksi, dan anggaran"
-    labels: ["needs-decision"]
-    notes: |
-      **Masalah:** akun DOKU Sandbox cukup untuk uji, tetapi transaksi nyata memakai akun DOKU Business yang umumnya melalui proses verifikasi dan dokumen bisnis (periksa syarat terbaru langsung ke DOKU). Belum jelas atas nama siapa akun dibuat (UKM, ITERA, atau perorangan), dokumen apa yang tersedia, siapa menanggung biaya transaksi, dan berapa lama persetujuannya. Anggaran Charter hanya Rp 1.000.000.
-
-      **Asumsi kerja:** kembangkan dan UAT memakai sandbox; ajukan akun produksi sedini mungkin karena waktu persetujuan di luar kendali tim.
-
-      **Putuskan sebelum:** 12 Okt. **Dampak:** US-20, US-21, REL-01, OQ-10.
-    slices: [{t: Full, m: I2, r: pm}]
-
-  # ===================== DOKUMEN, QA, UAT, RELEASE =====================
-  - id: DOC-01
-    kind: doc
-    title: "ERD final (SKPL Rev D)"
-    ref: "SKPL 3.3.1"
-    notes: "Memblokir TS-04. Target Jumat 2 Okt."
-    ac:
-      - "ERD mencakup D1-D4 + tabel tambahan yang disepakati (slot_foto, log_aktivitas, laporan)"
-      - "Traceability Data Store vs E-R diperbarui"
-    slices: [{t: Full, m: I1, r: qa}]
-
-  - id: DOC-02
-    kind: doc
-    title: "Lengkapi SKPL: P-SPEC, Activity, Sequence, Class Diagram"
-    ref: "SKPL 3.2.3, 3.2.4"
-    notes: "Deliverable akademik, dikerjakan paralel dan tidak memblokir coding. Selesai sebelum UAT (16 Nov)."
-    ac:
-      - "Seluruh placeholder P-SPEC terisi"
-      - "Activity, Sequence, Class Diagram terisi"
-    slices: [{t: Full, m: I7, g: M7, r: qa}]
-
-  - id: DOC-03
-    kind: doc
-    title: "Selaraskan SKPL, PRD, dan Guide dengan keputusan pembayaran DOKU"
-    ref: "SKPL Rev D"
-    notes: "SKPL Rev D mengubah pembayaran ke DOKU tetapi sebagian diagram dan data store masih memakai QRIS/bukti bayar. Keira memimpin perbaikan SKPL; PM memperbarui PRD dan Guide."
-    ac:
-      - "SKPL: Diagram Konteks, DFD Level 0/1 (4.0, 4.3, 4.4), dan Use Case tidak lagi memuat QRIS atau bukti pembayaran; judul gambar sesuai isinya"
-      - "SKPL: D4 dan ERD memuat data pembayaran DOKU (id transaksi, status bayar, metode, waktu bayar, log webhook) dan tidak lagi memuat bukti_bayar/verified_by"
-      - "SKPL: SKPL-F-09 dan 3.1.3 konsisten (invoice otomatis setelah webhook, bukan setelah verifikasi Admin Produk)"
-      - "SKPL: 2.1 dan tabel Karakteristik Pengguna tidak lagi menyebut verifikasi bukti atau QRIS"
-      - "SKPL: penomoran proses Dashboard seragam (5.0 atau 6.0), proses Layanan Aduan ada atau SKPL-F-10 dipetakan dengan benar, kerunutan F-07/F-10/F-12 diperbaiki"
-      - "SKPL: pernyataan media di 3.3 tidak lagi bertentangan soal bukti bayar"
-      - "PRD: tujuan, scope, alur pemesanan 6.2, US-20/21/22, risiko, dan OQ-02 diperbarui; Guide: nilai Simplicity dan rencana I3-I6 diperbarui"
-    slices: [{t: Full, m: I2, r: qa}]
-
-  - id: QA-01
-    kind: qa
-    title: "Regresi penuh E2E (5 alur kritis)"
-    ref: "Guide 9"
-    ac:
-      - "Login per peran"
-      - "Tulis, ajukan, approve, tampil di publik"
-      - "Cari dan filter berita"
-      - "Pesan, bayar di sandbox DOKU, webhook, invoice"
-      - "Reservasi slot"
-    slices: [{t: Full, m: I7, g: M7, r: qa}]
-
-  - id: QA-02
-    kind: qa
-    title: "Review keamanan (RBAC bypass, unggahan, injeksi, rate limit)"
-    ref: "SKPL-NF-08"
-    ac:
-      - "Tidak ada bypass RBAC di level API"
-      - "Validasi tipe/ukuran unggahan dan sanitasi HTML rich text"
-      - "Rate limit/honeypot aktif di form publik"
-      - "Webhook DOKU: tanda tangan palsu ditolak dan notifikasi ganda tidak berefek ganda"
-    slices: [{t: Full, m: I7, g: M7, r: qa}]
-
-  - id: QA-06
-    kind: qa
-    title: "Acceptance test pembayaran DOKU (sandbox): sukses, gagal, kedaluwarsa, webhook ganda/palsu"
-    ref: "SKPL-F-08, SKPL-F-09"
-    notes: "Ditulis sebelum US-20/US-21 Live dikerjakan (XP: test lebih dulu)."
-    ac:
-      - "Skenario bayar sukses: status berubah ke Dibayar dan invoice terkirim satu kali"
-      - "Skenario gagal dan kedaluwarsa: status tercatat dan slot dilepas"
-      - "Webhook dengan tanda tangan salah ditolak"
-      - "Webhook yang sama dikirim dua kali tidak mengirim invoice ganda"
-    slices: [{t: Full, m: I5, g: M5, r: qa}]
-
-  - id: QA-03
-    kind: qa
-    title: "Audit Lighthouse + uji jaringan kampus"
-    ref: "SKPL-NF-03, NF-06"
-    ac:
-      - "Performance > 80 dan Accessibility > 90 pada beranda dan halaman artikel"
-      - "Waktu muat < 5 detik di jaringan kampus"
-    slices: [{t: Full, m: I7, g: M7, r: qa}]
-
-  - id: QA-04
-    kind: qa
-    title: "Matriks perangkat & browser (360px/1024px x Chrome/Firefox/Safari)"
+    epic: mutu
     ref: "SKPL-NF-03, NF-04"
     ac:
-      - "Tidak ada horizontal scroll di 360px dan 1024px"
-      - "Tidak ada malafungsi tampilan di Chrome, Firefox, Safari"
-    slices: [{t: Full, m: I7, g: M7, r: qa}]
-
-  - id: QA-05
-    kind: qa
-    title: "Skrip UAT per peran, form sign-off, dan akun uji"
-    ref: "Charter M8"
+      - "Tanpa horizontal scroll dari 360px sampai 1024px"
+      - "Tampilan normal di Chrome, Firefox, dan Safari"
+    slices:
+      - { t: Full, m: M7, p: 3, g: M7, r: qa }
+  - id: T-04
+    title: "Uji editor & autosave di ponsel dan koneksi buruk"
+    kind: test
+    prio: M
+    epic: mutu
+    ref: "SKPL-NF-02 · Charter Risiko"
+    labels: ["risk"]
     ac:
-      - "Skrip UAT untuk tiap peran (langkah, hasil diharapkan, hasil aktual)"
-      - "Form UAT sign-off siap dicetak"
-      - "Akun uji tiap peran dibuat"
-    slices: [{t: Full, m: I7, g: M7, r: qa}]
-
-  - id: UAT-01
-    kind: uat
-    title: "Deploy build UAT, buat akun asli, kirim skrip UAT"
-    ref: "Charter M8"
-    notes: "Target Senin 16 Nov."
-    slices: [{t: Full, m: I8, g: M8, r: be}]
-
-  - id: UAT-02
-    kind: uat
-    title: "Sesi UAT bersama pengurus mitra"
-    ref: "Charter M8"
-    notes: "Usulan Rabu 18 Nov; sesuaikan jadwal Arvel Alyagin dan Nahli Saud Ramdani."
+      - "Menulis & mengajukan artikel nyaman di 360px"
+      - "Tidak ada kehilangan konten saat koneksi putus-nyambung"
+    slices:
+      - { t: Full, m: M7, p: 2, g: M7, r: pm }
+  - id: T-05
+    title: "Audit Lighthouse & waktu muat jaringan kampus"
+    kind: test
+    prio: M
+    epic: mutu
+    ref: "SKPL-NF-06 · Charter Milestone 7"
+    labels: ["risk"]
     ac:
-      - "Alur editorial, fitur produk, search/filter, dan dashboard diuji oleh perwakilan tiap peran"
-    slices: [{t: Full, m: I8, g: M8, r: pm}]
-
-  - id: UAT-03
-    kind: uat
-    title: "Triage & perbaikan temuan UAT"
-    ref: "Charter M8"
+      - "Lighthouse Performance > 80 dan Accessibility > 90"
+      - "Halaman utama & artikel termuat < 5 detik di jaringan kampus"
+    slices:
+      - { t: Full, m: M7, p: 3, g: M7, r: fe }
+  - id: T-06
+    title: "Uji keamanan dasar"
+    kind: test
+    prio: M
+    epic: mutu
+    ref: "SKPL-NF-08"
     ac:
-      - "Temuan diklasifikasi S1/S2/S3"
-      - "S1 dan S2 diperbaiki dan diverifikasi ulang oleh pelapor"
-      - "S3 dan permintaan baru masuk daftar fase berikutnya"
-    slices: [{t: Full, m: I8, g: M8, r: pm}]
-
-  - id: UAT-04
-    kind: uat
-    title: "Tanda tangan UAT sign-off oleh PIC mitra"
-    ref: "Charter M8"
+      - "Kata sandi tersimpan sebagai hash"
+      - "Sesi kedaluwarsa setelah tidak aktif"
+      - "Input form tervalidasi (mencegah injeksi) dan webhook DOKU diverifikasi"
+    slices:
+      - { t: Full, m: M7, p: 2, g: M7, r: be }
+  - id: T-07
+    title: "Review bahasa antarmuka (Bahasa Indonesia baku)"
+    kind: test
+    prio: S
+    epic: mutu
+    ref: "SKPL-NF-09"
     ac:
-      - "Form UAT sign-off ditandatangani PIC (Arvel Alyagin)"
-    slices: [{t: Full, m: I8, g: M8, r: pm}]
-
-  - id: REL-01
-    kind: release
-    title: "Konten awal, 6 akun, dan kredensial DOKU produksi"
-    ref: "Charter M9"
+      - "Label navigasi, pesan galat, dan form pemesanan berbahasa Indonesia baku"
+    slices:
+      - { t: Full, m: M7, p: 1, g: M7, r: pm }
+  - id: T-08a
+    title: "Perbaikan bug sisi FE hasil internal testing"
+    kind: task
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 7"
     ac:
-      - "Profil, kategori, dan produk contoh terisi"
-      - "6 akun dibuat; kata sandi awal diserahkan aman dan wajib diganti"
-      - "Kredensial DOKU produksi terpasang di variabel lingkungan Vercel dan URL webhook produksi terdaftar"
-      - "Transaksi uji bernilai kecil berhasil sampai invoice terkirim"
-    slices: [{t: Full, m: I9, g: M9, r: pm}]
-
-  - id: REL-02
-    kind: release
-    title: "Sesi serah terima ke pengurus + retrospektif proyek"
-    ref: "Charter M9"
+      - "Tidak ada bug kritikal (blocking) tersisa di sisi FE"
+    slices:
+      - { t: Full, m: M7, p: 3, g: M7, r: fe }
+  - id: T-08b
+    title: "Perbaikan bug sisi BE hasil internal testing"
+    kind: task
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 7"
     ac:
-      - "Pengurus menjalankan satu siklus artikel dan satu pesanan (bayar, invoice, konfirmasi jadwal) tanpa bantuan"
-      - "Akses Vercel (dan Supabase) dialihkan/dibagikan sesuai kesepakatan"
-      - "Retrospektif proyek dilakukan"
-    slices: [{t: Full, m: I9, g: M9, r: pm}]
-
-  - id: REL-03
-    kind: release
-    title: "Tanda tangan sign-off Project Charter"
-    ref: "Charter (Sign-off)"
-    notes: "Batas akhir Minggu 29 Nov 2026."
+      - "Tidak ada bug kritikal (blocking) tersisa di sisi BE"
+    slices:
+      - { t: Full, m: M7, p: 3, g: M7, r: be }
+  - id: T-09
+    title: "Uji pencarian, filter kategori & tombol share"
+    kind: test
+    prio: S
+    epic: mutu
+    ref: "SKPL-F-05, F-12"
     ac:
-      - "Lembar sign-off Project Charter ditandatangani"
-    slices: [{t: Full, m: I9, g: M9, r: pm}]
+      - "Pencarian dan filter akurat"
+      - "Tombol share berfungsi di semua artikel"
+    slices:
+      - { t: Full, m: M7, p: 1, g: M7, r: fe }
 
-  - id: BL-01
-    kind: backlog
+  # ---------- M8 — UAT ----------
+  - id: U-01
+    title: "Susun skenario UAT & form UAT sign-off"
+    kind: docs
+    prio: M
+    epic: mutu
+    ref: "Charter 8.2"
+    ac:
+      - "Lembar skenario uji per role siap"
+      - "Form UAT sign-off siap dicetak/digandakan"
+    slices:
+      - { t: Full, m: M8, p: 2, g: M8, r: qa }
+  - id: U-02
+    title: "Siapkan lingkungan & akun UAT (akun asli tiap role)"
+    kind: task
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 8"
+    ac:
+      - "Akun untuk 4 role tersedia dan bisa dipakai mitra"
+      - "Lingkungan UAT stabil dan terisi data contoh"
+    slices:
+      - { t: Full, m: M8, p: 2, g: M8, r: be }
+  - id: U-03
+    title: "Sesi UAT: alur editorial end-to-end"
+    kind: test
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 8"
+    ac:
+      - "Draft → ajukan → approve/reject → tayang di publik diuji pengurus"
+      - "Temuan dicatat"
+    slices:
+      - { t: Full, m: M8, p: 3, g: M8, r: pm }
+  - id: U-04
+    title: "Sesi UAT: produk mitra, search/filter & dashboard"
+    kind: test
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 8"
+    ac:
+      - "Alur pemesanan–pembayaran, pencarian/filter, dan dashboard diuji pengurus"
+      - "Temuan dicatat"
+    slices:
+      - { t: Full, m: M8, p: 3, g: M8, r: qa }
+  - id: U-05a
+    title: "Perbaikan temuan UAT sisi FE"
+    kind: task
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 8"
+    ac:
+      - "Seluruh temuan UAT sisi FE ditutup atau disepakati ditunda"
+    slices:
+      - { t: Full, m: M8, p: 3, g: M8, r: fe }
+  - id: U-05b
+    title: "Perbaikan temuan UAT sisi BE"
+    kind: task
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 8"
+    ac:
+      - "Seluruh temuan UAT sisi BE ditutup atau disepakati ditunda"
+    slices:
+      - { t: Full, m: M8, p: 3, g: M8, r: be }
+  - id: U-06
+    title: "UAT sign-off oleh PIC mitra (Arvel Alyagin)"
+    kind: docs
+    prio: M
+    epic: mutu
+    ref: "Charter Milestone 8"
+    ac:
+      - "Form UAT sign-off ditandatangani PIC mitra"
+    slices:
+      - { t: Full, m: M8, p: 1, g: M8, r: pm }
+
+  # ---------- M9 — Deployment & Handover ----------
+  - id: D-01
+    title: "Deployment produksi ke Vercel (+ Supabase produksi)"
+    kind: task
+    prio: M
+    epic: platform
+    ref: "Charter Milestone 9 · SKPL 2.4"
+    ac:
+      - "Website live dan dapat diakses publik"
+      - "Environment variable & kredensial hanya di server"
+    slices:
+      - { t: Full, m: M9, p: 3, g: M9, r: fe }
+  - id: D-02
+    title: "Domain kustom & HTTPS"
+    kind: task
+    prio: S
+    epic: platform
+    ref: "Charter 9.1 · SKPL 3.1.4"
+    ac:
+      - "Domain kustom terhubung ke Vercel"
+      - "Akses melalui HTTPS"
+    slices:
+      - { t: Full, m: M9, p: 2, g: M9, r: be }
+  - id: D-03
+    title: "Aktivasi DOKU mode produksi (kredensial & webhook)"
+    kind: task
+    prio: M
+    epic: produk
+    ref: "SKPL 3.1.3 · Charter Milestone 5"
+    labels: ["risk"]
+    notes: "Bergantung pada kesiapan akun merchant DOKU milik mitra. Sebelum itu, seluruh pengujian memakai sandbox."
+    ac:
+      - "Kredensial produksi terpasang di server"
+      - "URL webhook produksi terdaftar dan teruji satu transaksi nyata"
+    slices:
+      - { t: Full, m: M9, p: 2, g: M9, r: be }
+  - id: D-04
+    title: "Dokumentasi handover (cara upload, approve, akses Vercel)"
+    kind: docs
+    prio: M
+    epic: proyek
+    ref: "Charter Milestone 9"
+    ac:
+      - "Panduan upload artikel, approve artikel, dan akses Vercel tersedia"
+      - "PIC pasca-rilis bisa mengikuti panduan tanpa bantuan developer"
+    slices:
+      - { t: Full, m: M9, p: 3, g: M9, r: pm }
+  - id: D-05
+    title: "Cetak user manual & serah terima"
+    kind: docs
+    prio: S
+    epic: proyek
+    ref: "Charter 9.2"
+    ac:
+      - "User manual tercetak dan diserahkan ke PIC mitra"
+    slices:
+      - { t: Full, m: M9, p: 2, g: M9, r: qa }
+  - id: D-06
+    title: "Smoke test produksi, Lighthouse final & pemantauan uptime"
+    kind: test
+    prio: M
+    epic: mutu
+    ref: "SKPL-NF-01, NF-06"
+    ac:
+      - "Alur utama berjalan di produksi"
+      - "Skor Lighthouse tetap memenuhi target"
+      - "Pemantauan uptime ≥ 95% aktif"
+    slices:
+      - { t: Full, m: M9, p: 2, g: M9, r: qa }
+  - id: D-07
+    title: "Serah terima akses (Vercel, Supabase, DOKU, domain) ke PIC"
+    kind: task
+    prio: M
+    epic: proyek
+    ref: "Charter Milestone 9 · SKPL 2.3"
+    ac:
+      - "PIC pasca-rilis memegang akses seluruh layanan"
+      - "Maintenance jangka panjang menjadi tanggung jawab pengurus (di luar proyek)"
+    slices:
+      - { t: Full, m: M9, p: 2, g: M9, r: be }
+  - id: D-08
+    title: "Sign-off Project Charter ditandatangani"
+    kind: docs
+    prio: M
+    epic: proyek
+    ref: "Charter Milestone 9"
+    ac:
+      - "Lembar Sign-off Project Charter ditandatangani sebagai tanda proyek selesai"
+    slices:
+      - { t: Full, m: M9, p: 1, g: M9, r: pm }
+
+  # ---------- M10 — Fase berikutnya (ditunda/dipangkas; tanpa assignee, dibagi rata saat dimulai) ----------
+  - id: N-01
     title: "Flipbook / unduh PDF e-magazine"
-    ref: "Charter (Notes)"
-    notes: "Disetujui mitra tetapi tidak wajib di rilis pertama; dikerjakan di fase berikutnya bila waktu mencukupi."
-    slices: [{t: Full, m: NEXT}]
+    kind: feature
+    prio: C
+    epic: berita
+    ref: "Charter Notes"
+    labels: ["fase-2"]
+    story: "Sebagai pembaca, saya ingin membaca atau mengunduh e-magazine dalam bentuk flipbook/PDF."
+    notes: "Disetujui mitra tetapi tidak wajib di rilis pertama (Charter Notes). Dikerjakan hanya bila waktu mencukupi setelah M9."
+    ac:
+      - "Edisi e-magazine bisa dibaca sebagai flipbook atau diunduh PDF"
+      - "Admin dapat mengunggah edisi baru"
+    slices:
+      - { t: Full, m: M10, p: 5 }
+  - id: N-02
+    title: "Invoice otomatis ke email pemesan"
+    kind: feature
+    prio: C
+    epic: produk
+    ref: "SKPL 3.2.4.4.14"
+    labels: ["fase-2"]
+    story: "Sebagai pemesan, saya ingin menerima invoice lewat email setelah pesanan dikonfirmasi."
+    notes: "Dipangkas dari rilis 1: di rilis 1 bukti lunas cukup tampil di halaman pesanan. Alur invoice ada di SKPL 3.2.4.2.5 (EmailService), tetapi belum ada di deliverable Charter."
+    ac:
+      - "Pesanan DIKONFIRMASI memicu email invoice ke pemesan"
+      - "Kegagalan kirim email tercatat dan tidak membatalkan pesanan"
+    slices:
+      - { t: Full, m: M10, p: 3 }
+  - id: N-03
+    title: "Notifikasi email untuk alur editorial & pesanan masuk"
+    kind: feature
+    prio: C
+    epic: berita
+    ref: "SKPL 3.2.4.2.3 & 3.2.4.2.5"
+    labels: ["fase-2"]
+    story: "Sebagai pengelola, saya ingin diberi tahu lewat email saat ada artikel/pesanan yang perlu ditindak."
+    notes: "Dipangkas dari rilis 1: rilis 1 memakai notifikasi sederhana di dalam sistem (antrean/badge berbasis status)."
+    ac:
+      - "Super Admin menerima email saat ada artikel Pending Approval"
+      - "Admin Bidang menerima email saat artikel Published/Rejected"
+      - "Admin Produk menerima email saat ada pesanan masuk"
+    slices:
+      - { t: Full, m: M10, p: 3 }
