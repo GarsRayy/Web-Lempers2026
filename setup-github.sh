@@ -5,6 +5,11 @@
 # Tidak pernah menghapus atau mengubah isi issue yang sudah ada.
 # Assignee: diambil dari bagian 'assignees' di backlog.yml (role -> username GitHub); kosong = dilewati.
 # Role tiap irisan: field 'r' di slices (bila kosong: UI -> fe, Live -> be).
+# Tanggal otomatis: field "Start date" & "Target date" di Project diisi dari jadwal milestone (Project Charter).
+#   - Default: irisan dalam satu milestone + role yang sama dijadwalkan berurutan, sebanding dengan poinnya,
+#     sehingga balok Roadmap tidak menumpuk (matikan dengan --no-spread).
+#   - Override per irisan di backlog.yml: 's: 2026-09-28' (mulai) dan/atau 'd: 2026-09-30' (tenggat).
+#   - Tanggal yang sudah terisi (mis. hasil drag di Roadmap) TIDAK ditimpa, kecuali --force-dates.
 #
 # Pemakaian:  ./setup-github.sh --dry-run     (lihat dulu, tidak mengubah apa pun)
 #             ./setup-github.sh               (jalankan sungguhan)
@@ -19,6 +24,10 @@ BACKLOG="$SCRIPT_DIR/backlog.yml"
 DRY=0
 REPO=""
 ONLY="labels,milestones,issues,project"
+SPREAD=1
+FORCE=0
+F_START="Start date"
+F_DUE="Target date"
 SLEEP="${SLEEP:-1}"   # jeda (detik) antar pembuatan issue, menghindari secondary rate limit
 
 usage() {
@@ -28,6 +37,8 @@ Pemakaian: ./setup-github.sh [opsi]
   --dry-run           tampilkan rencana tanpa mengubah apa pun
   --repo OWNER/REPO   timpa repo yang tertulis di backlog.yml
   --backlog FILE      file sumber (default: backlog.yml di folder skrip)
+  --no-spread         semua issue satu milestone memakai tanggal milestone yang sama (tanpa dijadwal berurutan)
+  --force-dates       timpa tanggal yang sudah terisi di Project (default: hanya isi yang kosong)
   --only LANGKAH      daftar dipisah koma: labels,milestones,issues,project,assign
                       (default: labels,milestones,issues,project; 'assign' hanya bila diminta)
   -h, --help          bantuan ini
@@ -39,6 +50,8 @@ EOF
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1; shift ;;
+    --no-spread) SPREAD=0; shift ;;
+    --force-dates) FORCE=1; shift ;;
     --repo)    [ $# -ge 2 ] || { echo "ERROR: --repo butuh nilai" >&2; exit 1; }; REPO="$2"; shift 2 ;;
     --backlog) [ $# -ge 2 ] || { echo "ERROR: --backlog butuh nilai" >&2; exit 1; }; BACKLOG="$2"; shift 2 ;;
     --only)    [ $# -ge 2 ] || { echo "ERROR: --only butuh nilai" >&2; exit 1; }; ONLY="$2"; shift 2 ;;
@@ -91,6 +104,35 @@ JQ_FLATTEN=''
 read -r -d '' JQ_FLATTEN <<'JQ' || true
 def prio_name: {"M":"Must","S":"Should","C":"Could"};
 def bullets: map("- [ ] " + .) | join("\n");
+def d2s: strptime("%Y-%m-%d") | mktime;
+def s2d: gmtime | strftime("%Y-%m-%d");
+# jadwalkan berurutan per (milestone, role), lebar jendela sebanding poin; irisan dengan s/d eksplisit dilewati
+def spread:
+  to_entries
+  | map(.value + {_i: .key})
+  | group_by([.mid, .role])
+  | map(
+      . as $g
+      | ([$g[] | (.points // 1)] | add) as $tot
+      | reduce range(0; $g | length) as $k ({acc: 0, out: []};
+          $g[$k] as $it
+          | .acc as $c0
+          | ($c0 + ($it.points // 1)) as $c1
+          | .acc = $c1
+          | .out += [ $it + (
+              if ($it.start != null and $it.due != null and ($it.explicit | not)) then
+                ($it.start | d2s) as $a | ($it.due | d2s) as $b
+                | ((($b - $a) / 86400) + 1) as $L
+                | ((($c0 / $tot) * $L + 1e-9) | floor) as $o0
+                | ((($c1 / $tot) * $L - 1e-9) | ceil) as $o1
+                | (if $o1 - 1 < $o0 then $o0 else ($o1 - 1) end) as $o2
+                | {start: ($a + $o0 * 86400 | s2d),
+                   due: ((if $a + $o2 * 86400 > $b then $b else $a + $o2 * 86400 end) | s2d)}
+              else {} end) ])
+      | .out[]
+    )
+  | sort_by(._i)
+  | map(del(._i));
 (.milestones | map({(.id): .title}) | add) as $mt
 | (.milestones | map({(.id): {start: (.start // null), due: (.due // null)}}) | add) as $md
 | (.assignees // {}) as $asg
@@ -104,8 +146,10 @@ def bullets: map("- [ ] " + .) | join("\n");
         role: $role,
         assignee: (($asg[$role] // "") | tostring),
         milestone: ($mt[$s.m] // error("milestone '\($s.m)' (di \($e.id)) tidak ada di bagian milestones")),
-        start: ($md[$s.m].start // null),
-        due: ($md[$s.m].due // null),
+        mid: $s.m,
+        explicit: (($s.s != null) or ($s.d != null)),
+        start: (($s.s // $md[$s.m].start) // null | if . == null then null else tostring end),
+        due: (($s.d // $md[$s.m].due) // null | if . == null then null else tostring end),
         points: ($s.p // null),
         prio: (if $e.prio then prio_name[$e.prio] else null end),
         gate: ($s.g // null),
@@ -131,9 +175,11 @@ def bullets: map("- [ ] " + .) | join("\n");
         )
       }
   ]
+| if $spread == 1 then spread else . end
+| map(del(.mid, .explicit))
 JQ
 
-ISSUES="$(jq -c "$JQ_FLATTEN" <<<"$DATA")" || die "Gagal meratakan backlog (periksa milestone/slices di backlog.yml)."
+ISSUES="$(jq -c --argjson spread "$SPREAD" "$JQ_FLATTEN" <<<"$DATA")" || die "Gagal meratakan backlog (periksa milestone/slices di backlog.yml)."
 
 # validasi: judul issue harus unik
 DUP="$(jq -r '[group_by(.title)[] | select(length > 1) | .[0].title] | join("; ")' <<<"$ISSUES")"
@@ -274,9 +320,10 @@ step_project() {
 
   if [ "$DRY" = 1 ]; then
     log "  [dry-run] project: \"$ptitle\" (owner: $OWNER) — dibuat bila belum ada, lalu ditautkan ke $REPO"
-    log "  [dry-run] field : Poin (NUMBER) · Prioritas (Must/Should/Could) · Gerbang Charter (M1..M9) · Mulai & Tenggat (DATE)"
+    log "  [dry-run] field : Poin (NUMBER) · Prioritas (Must/Should/Could) · Gerbang Charter (M1..M9) · $F_START & $F_DUE (DATE)"
     log "  [dry-run] status: memakai field bawaan Status (Todo/In Progress/Done)"
     log "  [dry-run] view  : Roadmap (layout roadmap) — dibuat bila belum ada, lewat REST API"
+    log "  [dry-run] tanggal: $( [ "$SPREAD" = 1 ] && echo 'dijadwal berurutan per milestone+role' || echo 'sama dengan tanggal milestone' ); $( [ "$FORCE" = 1 ] && echo 'menimpa tanggal yang ada' || echo 'tidak menimpa tanggal yang sudah terisi' )"
     jq -r '.[] | "  [dry-run] item  : \(.title)  (poin \(.points // "-") | \(.prio // "-") | \(.gate // "-") | \(.start // "-") → \(.due // "-"))"' <<<"$ISSUES"
     return 0
   fi
@@ -315,22 +362,30 @@ step_project() {
       --single-select-options "M1,M2,M3,M4,M5,M6,M7,M8,M9" </dev/null >/dev/null
     log "  + field: Gerbang Charter"
   fi
-  if ! has_field "Mulai"; then
-    gh project field-create "$num" --owner "$POWNER" --name "Mulai" --data-type DATE </dev/null >/dev/null
-    log "  + field: Mulai"
+  if ! has_field "$F_START"; then
+    gh project field-create "$num" --owner "$POWNER" --name "$F_START" --data-type DATE </dev/null >/dev/null
+    log "  + field: $F_START"
   fi
-  if ! has_field "Tenggat"; then
-    gh project field-create "$num" --owner "$POWNER" --name "Tenggat" --data-type DATE </dev/null >/dev/null
-    log "  + field: Tenggat"
+  if ! has_field "$F_DUE"; then
+    gh project field-create "$num" --owner "$POWNER" --name "$F_DUE" --data-type DATE </dev/null >/dev/null
+    log "  + field: $F_DUE"
   fi
   fields="$(gh project field-list "$num" --owner "$POWNER" --limit 50 --format json </dev/null)"
   fid() { jq -r --arg n "$1" '.fields[] | select(.name == $n) | .id' <<<"$fields"; }
   oid() { jq -r --arg n "$1" --arg o "$2" '.fields[] | select(.name == $n) | .options[] | select(.name == $o) | .id' <<<"$fields"; }
   local f_poin f_prio f_gate f_start f_due
   f_poin="$(fid "Poin")"; f_prio="$(fid "Prioritas")"; f_gate="$(fid "Gerbang Charter")"
-  f_start="$(fid "Mulai")"; f_due="$(fid "Tenggat")"
+  f_start="$(fid "$F_START")"; f_due="$(fid "$F_DUE")"
 
   issues_json="$(gh issue list --repo "$REPO" --state all --limit 1000 --json title,url </dev/null)"
+  # nilai field yang sudah ada, supaya tanggal hasil edit manual (drag di Roadmap) tidak tertimpa
+  local items_json
+  items_json="$(gh project item-list "$num" --owner "$POWNER" --limit 1000 --format json </dev/null 2>/dev/null || echo '{"items":[]}')"
+  has_val() {
+    jq -e --arg id "$1" --arg n "$2" \
+      '.items[] | select(.id == $id) | to_entries[] | select((.key | ascii_downcase) == ($n | ascii_downcase)) | select(.value != null and .value != "")' \
+      <<<"$items_json" >/dev/null 2>&1
+  }
   local added=0
   while IFS= read -r i <&3; do
     title="$(jq -r '.title' <<<"$i")"
@@ -342,10 +397,10 @@ step_project() {
     gate="$(jq -r '.gate // empty' <<<"$i")"
     dstart="$(jq -r '.start // empty' <<<"$i")"
     ddue="$(jq -r '.due // empty' <<<"$i")"
-    if [ -n "$dstart" ]; then
+    if [ -n "$dstart" ] && { [ "$FORCE" = 1 ] || ! has_val "$item" "$F_START"; }; then
       gh project item-edit --id "$item" --project-id "$pid" --field-id "$f_start" --date "$dstart" </dev/null >/dev/null
     fi
-    if [ -n "$ddue" ]; then
+    if [ -n "$ddue" ] && { [ "$FORCE" = 1 ] || ! has_val "$item" "$F_DUE"; }; then
       gh project item-edit --id "$item" --project-id "$pid" --field-id "$f_due" --date "$ddue" </dev/null >/dev/null
     fi
     if [ -n "$points" ]; then
@@ -397,5 +452,5 @@ info "Selesai$( [ "$DRY" = 1 ] && printf ' (DRY-RUN: tidak ada yang diubah)' )"
 if [ "$DRY" = 1 ]; then
   log "  Jika rencana sudah sesuai, jalankan tanpa --dry-run."
 else
-  log "  Cek view Roadmap di GitHub Project: pastikan pengaturan tanggalnya memakai field Mulai & Tenggat. View lain (Board/Table) dibuat manual bila perlu."
+  log "  Cek view Roadmap di GitHub Project: bila balok belum muncul, buka 'Date fields' dan arahkan Start date -> \"$F_START\", End/Target date -> \"$F_DUE\" (sekali saja). View lain (Board/Table) dibuat manual bila perlu."
 fi
